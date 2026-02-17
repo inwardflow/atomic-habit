@@ -68,6 +68,9 @@ public class MemoryService {
     @Value("${agentscope.model.model-name}")
     private String modelName;
 
+    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
+    private String baseUrl;
+
     @Value("${coach.memory.llm-extraction-enabled:true}")
     private boolean llmExtractionEnabled;
 
@@ -197,7 +200,7 @@ public class MemoryService {
             OpenAIChatModel model = OpenAIChatModel.builder()
                     .apiKey(apiKey)
                     .modelName(modelName)
-                    .baseUrl("https://api.siliconflow.com/v1")
+                    .baseUrl(baseUrl)
                     .build();
 
             ReActAgent summarizer = ReActAgent.builder()

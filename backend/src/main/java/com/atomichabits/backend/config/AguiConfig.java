@@ -22,6 +22,9 @@ public class AguiConfig {
     @Value("${agentscope.model.model-name}")
     private String modelName;
 
+    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
+    private String baseUrl;
+
     private final CoachTools coachTools;
     private final CoachLongTermMemory coachLongTermMemory;
 
@@ -46,7 +49,7 @@ public class AguiConfig {
         OpenAIChatModel model = OpenAIChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(modelName)
-                .baseUrl("https://api.siliconflow.com/v1")
+                .baseUrl(baseUrl)
                 // Some provider/model combinations emit malformed streaming tool events,
                 // which breaks @ag-ui/client verification and surfaces as "Connection failed".
                 // Disable model-level streaming so AG-UI can emit a stable event sequence.

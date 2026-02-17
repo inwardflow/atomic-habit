@@ -47,6 +47,9 @@ public class CoachService {
     @Value("${agentscope.model.model-name}")
     private String modelName;
 
+    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
+    private String baseUrl;
+
     @Value("${agentscope.enabled:true}")
     private boolean agentscopeEnabled;
 
@@ -506,7 +509,7 @@ public class CoachService {
         var modelBuilder = OpenAIChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(modelName)
-                .baseUrl("https://api.siliconflow.com/v1");
+                .baseUrl(baseUrl);
 
         // Allow backend engineers to explicitly enable/disable proxy via YAML.
         if (proxyEnabled) {

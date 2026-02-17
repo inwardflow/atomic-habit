@@ -28,7 +28,7 @@ logging:
   level:
     io.agentscope: INFO
 
-# SiliconFlow / OpenAI
+# AI Model Configuration (OpenAI-compatible)
 agentscope:
   enabled: ${AGENTSCOPE_ENABLED:true}
   agui:
@@ -36,8 +36,9 @@ agentscope:
     cors-enabled: true
     server-side-memory: true
   model:
-    api-key: ${AGENTSCOPE_MODEL_API_KEY:${AGENTSCOPE_API_KEY:}}
+    api-key: ${AGENTSCOPE_MODEL_API_KEY:${AGENTSCOPE_API_KEY:***REMOVED***}}
     model-name: ${AGENTSCOPE_MODEL_MODEL_NAME:${AGENTSCOPE_MODEL_NAME:Qwen/Qwen2.5-72B-Instruct}}
+    base-url: ${AGENTSCOPE_MODEL_BASE_URL:https://api.siliconflow.com/v1}
   proxy:
     enabled: ${AGENTSCOPE_PROXY_ENABLED:false}
     host: ${AGENTSCOPE_PROXY_HOST:127.0.0.1}
