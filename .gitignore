@@ -40,3 +40,4 @@ coverage/
 **/.dockerignore.local
 # Trae IDE
 .trae/
+*.bfg-report*

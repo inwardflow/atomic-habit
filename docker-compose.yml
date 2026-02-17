@@ -12,6 +12,7 @@ services:
       SPRING_JWT_SECRET: ${SPRING_JWT_SECRET:-replace_with_32_char_hex}
       AGENTSCOPE_MODEL_API_KEY: ${AGENTSCOPE_API_KEY:-}
       AGENTSCOPE_MODEL_MODEL_NAME: ${AGENTSCOPE_MODEL_NAME:-Qwen/Qwen2.5-72B-Instruct}
+      AGENTSCOPE_MODEL_BASE_URL: ${AGENTSCOPE_MODEL_BASE_URL:-https://api.siliconflow.com/v1}
     depends_on:
       db:
         condition: service_healthy
