@@ -47,7 +47,7 @@ agentscope:
     sse-timeout: ${AGENTSCOPE_SSE_TIMEOUT:300000}
     run-timeout: ${AGENTSCOPE_RUN_TIMEOUT:5m}
   model:
-    api-key: ${AGENTSCOPE_MODEL_API_KEY:${AGENTSCOPE_API_KEY:***REMOVED***}}
+    api-key: ${AGENTSCOPE_MODEL_API_KEY:${AGENTSCOPE_API_KEY:}}
     model-name: ${AGENTSCOPE_MODEL_MODEL_NAME:${AGENTSCOPE_MODEL_NAME:Qwen/Qwen2.5-72B-Instruct}}
     base-url: ${AGENTSCOPE_MODEL_BASE_URL:https://api.siliconflow.com/v1}
   proxy:
