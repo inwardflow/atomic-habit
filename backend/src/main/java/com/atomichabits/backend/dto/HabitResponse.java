@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -17,6 +18,9 @@ public class HabitResponse {
     @JsonProperty("isActive")
     private boolean isActive;
     private boolean completedToday;
+    private boolean scheduledToday;
     private int currentStreak;
+    // List of day names, null/empty = daily
+    private List<String> frequency;
     private LocalDateTime createdAt;
 }

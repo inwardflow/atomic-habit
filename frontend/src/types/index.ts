@@ -6,6 +6,7 @@ export interface Habit {
   cueHabitStack: string;
   isActive: boolean;
   completedToday: boolean;
+  scheduledToday: boolean;
   currentStreak?: number;
   goalId?: number;
   frequency?: string[];

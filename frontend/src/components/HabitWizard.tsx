@@ -2,11 +2,22 @@ import React, { useState } from 'react';
 import api from '../api/axios';
 import type { HabitRequest } from '../types';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 
 interface HabitWizardProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const DAYS = [
+  { key: 'MONDAY', label: 'Mon' },
+  { key: 'TUESDAY', label: 'Tue' },
+  { key: 'WEDNESDAY', label: 'Wed' },
+  { key: 'THURSDAY', label: 'Thu' },
+  { key: 'FRIDAY', label: 'Fri' },
+  { key: 'SATURDAY', label: 'Sat' },
+  { key: 'SUNDAY', label: 'Sun' },
+];
 
 const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
   const [step, setStep] = useState(1);
@@ -16,7 +27,15 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
     cueImplementationIntention: '',
     cueHabitStack: ''
   });
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [isDaily, setIsDaily] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    );
+  };
 
   const handleSubmit = async () => {
     if (!data.name) {
@@ -25,7 +44,11 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
     }
     setLoading(true);
     try {
-      await api.post('/habits', data);
+      const payload: HabitRequest = {
+        ...data,
+        frequency: isDaily ? undefined : selectedDays.length > 0 ? selectedDays : undefined,
+      };
+      await api.post('/habits', payload);
       toast.success('Habit created successfully!');
       onSuccess();
       onClose();
@@ -37,10 +60,12 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
     }
   };
 
+  const totalSteps = 5;
+
   return (
     <div className="fixed inset-0 bg-gray-600/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-slate-800 p-6 rounded-lg w-full max-w-md shadow-xl dark:shadow-black/50 transition-colors duration-300">
-        <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Create New Habit (Step {step}/4)</h3>
+        <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Create New Habit (Step {step}/{totalSteps})</h3>
         
         {step === 1 && (
           <div>
@@ -132,13 +157,73 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
             </div>
              <div className="flex gap-2">
                 <button onClick={() => setStep(3)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Back</button>
-                <button 
-                    onClick={handleSubmit} 
-                    disabled={loading}
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex-1 disabled:opacity-50"
-                >
-                    {loading ? 'Creating...' : 'Create Habit'}
-                </button>
+                <button onClick={() => setStep(5)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">Next</button>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div>
+            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">Schedule (Frequency)</label>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">How often do you want to do this habit?</p>
+            
+            <div className="flex gap-3 mb-4">
+              <button
+                onClick={() => setIsDaily(true)}
+                className={clsx(
+                  "flex-1 py-2.5 rounded-lg text-sm font-medium transition-all border",
+                  isDaily
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
+                )}
+              >
+                Every Day
+              </button>
+              <button
+                onClick={() => setIsDaily(false)}
+                className={clsx(
+                  "flex-1 py-2.5 rounded-lg text-sm font-medium transition-all border",
+                  !isDaily
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
+                )}
+              >
+                Specific Days
+              </button>
+            </div>
+
+            {!isDaily && (
+              <div className="flex gap-1.5 mb-4 justify-center">
+                {DAYS.map(day => (
+                  <button
+                    key={day.key}
+                    onClick={() => toggleDay(day.key)}
+                    className={clsx(
+                      "w-10 h-10 rounded-full text-xs font-bold transition-all",
+                      selectedDays.includes(day.key)
+                        ? "bg-indigo-600 text-white shadow-sm shadow-indigo-300 dark:shadow-indigo-900"
+                        : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                    )}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg mb-4 text-xs text-indigo-800 dark:text-indigo-300 italic">
+              "You do not rise to the level of your goals. You fall to the level of your systems."
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={() => setStep(4)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Back</button>
+              <button 
+                onClick={handleSubmit} 
+                disabled={loading || (!isDaily && selectedDays.length === 0)}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex-1 disabled:opacity-50"
+              >
+                {loading ? 'Creating...' : 'Create Habit'}
+              </button>
             </div>
           </div>
         )}

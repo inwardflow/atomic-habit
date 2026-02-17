@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { Check, MoreVertical, Pause, Trash2, Edit2, Play, Flame, Timer } from 'lucide-react';
+import { Check, MoreVertical, Pause, Trash2, Edit2, Play, Flame, Timer, Calendar } from 'lucide-react';
 import clsx from 'clsx';
 import type { Habit } from '../types';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import TwoMinuteTimer from './TwoMinuteTimer';
+
+const DAY_LABELS: Record<string, string> = {
+  MONDAY: 'Mon', TUESDAY: 'Tue', WEDNESDAY: 'Wed',
+  THURSDAY: 'Thu', FRIDAY: 'Fri', SATURDAY: 'Sat', SUNDAY: 'Sun',
+};
 
 interface HabitCardProps {
   habit: Habit;
@@ -28,6 +33,8 @@ const HabitCard: React.FC<HabitCardProps> = ({
   const [showTimer, setShowTimer] = useState(false);
   const [editName, setEditName] = useState(habit.name);
 
+  const isNotScheduledToday = habit.scheduledToday === false;
+
   const handleComplete = async () => {
       if (habit.completedToday) {
           await onUncomplete(habit.id);
@@ -45,8 +52,6 @@ const HabitCard: React.FC<HabitCardProps> = ({
   const handleTimerComplete = async () => {
       setShowTimer(false);
       await onComplete(habit.id);
-      // Confetti is already handled inside Timer but maybe we want another one?
-      // Or just toast.
       toast.success('Timer complete! Habit marked as done.', { icon: '✅' });
   };
 
@@ -56,6 +61,10 @@ const HabitCard: React.FC<HabitCardProps> = ({
       }
       setIsEditing(false);
   };
+
+  const frequencyLabel = habit.frequency && habit.frequency.length > 0
+    ? habit.frequency.map(d => DAY_LABELS[d] || d).join(', ')
+    : null;
 
   return (
     <>
@@ -72,7 +81,9 @@ const HabitCard: React.FC<HabitCardProps> = ({
         "group relative bg-white dark:bg-slate-800 p-6 rounded-2xl border transition-all duration-300",
         habit.completedToday 
           ? "border-green-200 dark:border-green-900 shadow-sm bg-green-50/10 dark:bg-green-900/10" 
-          : "border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-700",
+          : isNotScheduledToday
+            ? "border-slate-100 dark:border-slate-700/50 shadow-none opacity-50"
+            : "border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-700",
         !habit.isActive && "opacity-60 grayscale-[0.5]"
       )}
     >
@@ -99,7 +110,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
                 </h3>
             )}
             
-          <div className="mt-2 flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+          <div className="mt-2 flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 flex-wrap">
             {habit.currentStreak !== undefined && habit.currentStreak > 0 && (
                 <div className={clsx(
                     "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border transition-colors",
@@ -110,6 +121,17 @@ const HabitCard: React.FC<HabitCardProps> = ({
                     <Flame className={clsx("w-3 h-3", habit.currentStreak >= 3 ? "fill-orange-500 text-orange-600" : "text-slate-400")} />
                     {habit.currentStreak} Day{habit.currentStreak > 1 ? 's' : ''}
                 </div>
+            )}
+
+            {frequencyLabel && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-900/50">
+                <Calendar className="w-3 h-3" />
+                {frequencyLabel}
+              </div>
+            )}
+
+            {isNotScheduledToday && (
+              <span className="text-xs text-slate-400 dark:text-slate-500 italic">Rest day</span>
             )}
 
             {habit.twoMinuteVersion && (

@@ -266,7 +266,12 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {habits.map((habit) => (
+              {[...habits].sort((a, b) => {
+                // Scheduled today first, rest days at the bottom
+                if (a.scheduledToday !== false && b.scheduledToday === false) return -1;
+                if (a.scheduledToday === false && b.scheduledToday !== false) return 1;
+                return 0;
+              }).map((habit) => (
                 <HabitCard
                     key={habit.id}
                     habit={habit}
