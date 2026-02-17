@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
+import { BACKEND_URL } from '../api/axios';
 import toast from 'react-hot-toast';
 
 interface UseNotificationsOptions {
@@ -61,7 +62,7 @@ export const useNotifications = ({ connect = true }: UseNotificationsOptions = {
         };
 
         const connectSse = () => {
-            const url = `http://localhost:8080/api/notifications/subscribe?token=${token}`;
+            const url = `${BACKEND_URL}/api/notifications/subscribe?token=${token}`;
             eventSource = new EventSource(url);
 
             eventSource.addEventListener('notification', (event: MessageEvent) => {

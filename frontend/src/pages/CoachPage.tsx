@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import JSON5 from 'json5';
 import toast from 'react-hot-toast';
 import { generateWeeklyReview, getCoachMemoryHits, getGreeting, getChatHistory, getWeeklyReviews } from '../api/coach';
+import { BACKEND_URL } from '../api/axios';
 import type { CoachMemoryHitsResponse, WeeklyReviewRecord } from '../api/coach';
 import WeeklyReviewCard from '../components/WeeklyReviewCard';
 import DailyFocusCard from '../components/DailyFocusCard';
@@ -411,7 +412,7 @@ const CoachPage = () => {
   useEffect(() => {
     // Initialize Agent
     const newAgent = new HttpAgent({
-      url: 'http://localhost:8080/agui/run',
+      url: `${BACKEND_URL}/agui/run`,
       // @ts-ignore
       threadId: 'user-' + (user ? user.id : Date.now()),
       ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})

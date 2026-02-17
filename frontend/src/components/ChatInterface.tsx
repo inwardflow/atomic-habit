@@ -5,13 +5,13 @@ import JSON5 from 'json5';
 import { Calendar, Layers, Send, X, Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
-import api from '../api/axios';
+import api, { BACKEND_URL } from '../api/axios';
 import { useGoals } from '../hooks/useGoals';
 import { useHabits } from '../hooks/useHabits';
 import { useAuthStore } from '../store/authStore';
 import type { GoalRequest, HabitRequest } from '../types';
 
-const AGENT_RUN_URL = 'http://localhost:8080/agui/run';
+const AGENT_RUN_URL = `${BACKEND_URL}/agui/run`;
 
 const STARTER_PROMPTS = [
   'I feel a bit overwhelmed. Walk me through 3 tiny first steps.',
