@@ -1,0 +1,40 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+
+# IDE
+.idea/
+.vscode/
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Backend build outputs
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend dependencies and outputs
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+
+# Test artifacts
+coverage/
+*.lcov
+
+# Tool caches
+.cache/
+.npm/
+
+# Docker
+**/.dockerignore.local
