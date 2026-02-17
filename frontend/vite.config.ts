@@ -35,4 +35,24 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Charting library (heavy)
+          'vendor-recharts': ['recharts'],
+          // Animation library
+          'vendor-framer': ['framer-motion'],
+          // UI utilities
+          'vendor-ui': ['lucide-react', 'react-hot-toast', 'canvas-confetti', 'clsx', 'tailwind-merge'],
+          // Data & state
+          'vendor-data': ['axios', 'zustand', 'date-fns'],
+          // Markdown & AG-UI
+          'vendor-content': ['react-markdown', '@ag-ui/client'],
+        },
+      },
+    },
+  },
 })
