@@ -276,6 +276,22 @@ const parseDisplayContent = (
     return match;
   });
 
+  // Fallback: match bare `replies ["..."]` lines that the AI sometimes emits
+  // without wrapping in a fenced code block.
+  if (replies.length === 0) {
+    displayContent = displayContent.replace(
+      /^\s*replies\s+(\[.*\])\s*$/gim,
+      (_match, jsonPart) => {
+        const parsed = tryParseJson(jsonPart);
+        if (isStringArray(parsed)) {
+          replies = parsed;
+          return '';
+        }
+        return _match;
+      }
+    );
+  }
+
   displayContent = displayContent.trim();
 
   const planMatch = displayContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);

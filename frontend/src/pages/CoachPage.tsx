@@ -394,6 +394,25 @@ const CoachPage = () => {
         }
     }
 
+    // Fallback: match bare `replies ["..."]` lines that the AI sometimes emits
+    // without wrapping in a fenced code block.
+    if (suggestions.length === 0) {
+      text = text.replace(
+        /^\s*replies\s+(\[.*\])\s*$/gim,
+        (_match: string, jsonPart: string) => {
+          try {
+            const parsed = JSON5.parse(jsonPart);
+            if (Array.isArray(parsed) && parsed.every((i: unknown) => typeof i === 'string')) {
+              suggestions = parsed;
+              return '';
+            }
+          } catch { /* not valid JSON */ }
+          return _match;
+        }
+      );
+      text = text.trim();
+    }
+
     return { text, suggestions, toolCall, plan, weeklyReview };
   };
 
