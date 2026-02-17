@@ -158,7 +158,9 @@ public class GoalService {
                             .cueImplementationIntention(habit.getCueImplementationIntention())
                             .cueHabitStack(habit.getCueHabitStack())
                             .isActive(habit.isActive())
-                            .completedToday(completedToday) 
+                            .completedToday(completedToday)
+                            .scheduledToday(habitService.isScheduledForDate(habit, LocalDate.now()))
+                            .frequency(null) // frequency is handled at the habit level
                             .createdAt(habit.getCreatedAt())
                             .build();
                     })

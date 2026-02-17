@@ -2,8 +2,14 @@ import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
+/** API base URL from environment variable, defaults to localhost for development */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+/** Backend root URL (for AG-UI, SSE, etc.) */
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {

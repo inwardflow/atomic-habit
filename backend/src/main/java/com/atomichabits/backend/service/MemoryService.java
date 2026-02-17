@@ -1,5 +1,6 @@
 package com.atomichabits.backend.service;
 
+import lombok.extern.slf4j.Slf4j;
 import com.atomichabits.backend.model.*;
 import com.atomichabits.backend.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class MemoryService {
     private static final Pattern JSON_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```", Pattern.CASE_INSENSITIVE);
@@ -68,6 +70,9 @@ public class MemoryService {
     @Value("${agentscope.model.model-name}")
     private String modelName;
 
+    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
+    private String baseUrl;
+
     @Value("${coach.memory.llm-extraction-enabled:true}")
     private boolean llmExtractionEnabled;
 
@@ -93,7 +98,7 @@ public class MemoryService {
             try {
                 generateSummaryForDate(user, yesterday);
             } catch (Exception e) {
-                System.err.println("Failed to generate summary for user " + user.getEmail() + ": " + e.getMessage());
+                log.warn("Failed to generate summary for user {}: {}", user.getEmail(), e.getMessage());
             }
         }
     }
@@ -194,10 +199,19 @@ public class MemoryService {
 
     private String callAIWithSystemPrompt(String prompt, String systemPrompt, String agentName) {
         try {
+            var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
+                    .connectTimeout(java.time.Duration.ofSeconds(30))
+                    .readTimeout(java.time.Duration.ofMinutes(3))
+                    .writeTimeout(java.time.Duration.ofSeconds(30))
+                    .build();
+            var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
+                    .config(transportConfig)
+                    .build();
             OpenAIChatModel model = OpenAIChatModel.builder()
                     .apiKey(apiKey)
                     .modelName(modelName)
-                    .baseUrl("https://api.siliconflow.com/v1")
+                    .baseUrl(baseUrl)
+                    .httpTransport(httpTransport)
                     .build();
 
             ReActAgent summarizer = ReActAgent.builder()
@@ -214,7 +228,7 @@ public class MemoryService {
 
             return response != null ? response.getTextContent() : null;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("AI call failed for agent {}: {}", agentName, e.getMessage());
             return null;
         }
     }

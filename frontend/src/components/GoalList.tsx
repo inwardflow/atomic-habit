@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, Calendar, ArrowRight, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import clsx from 'clsx';
 import type { Goal } from '../types/index';
 

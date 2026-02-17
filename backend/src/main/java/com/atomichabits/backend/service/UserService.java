@@ -10,7 +10,10 @@ import com.atomichabits.backend.repository.MoodRepository;
 import com.atomichabits.backend.model.MoodLog;
 import com.atomichabits.backend.dto.MoodInsightDTO;
 import com.atomichabits.backend.exception.ResourceNotFoundException;
+import com.atomichabits.backend.exception.UnauthorizedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -23,12 +26,63 @@ public class UserService {
     private final HabitCompletionRepository habitCompletionRepository;
     private final GamificationService gamificationService;
     private final MoodRepository moodRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, HabitCompletionRepository habitCompletionRepository, GamificationService gamificationService, MoodRepository moodRepository) {
+    public UserService(UserRepository userRepository, HabitCompletionRepository habitCompletionRepository,
+                       GamificationService gamificationService, MoodRepository moodRepository,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.habitCompletionRepository = habitCompletionRepository;
         this.gamificationService = gamificationService;
         this.moodRepository = moodRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new UnauthorizedException("Current password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteAccount(String email, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new UnauthorizedException("Password is incorrect");
+        }
+
+        userRepository.delete(user);
+    }
+
+    public UserProfileResponse updateProfile(String email, String identityStatement, String newEmail) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (identityStatement != null) {
+            user.setIdentityStatement(identityStatement);
+        }
+        if (newEmail != null && !newEmail.isBlank() && !newEmail.equals(email)) {
+            if (userRepository.existsByEmail(newEmail)) {
+                throw new IllegalArgumentException("Email is already taken");
+            }
+            user.setEmail(newEmail);
+        }
+
+        User savedUser = userRepository.save(user);
+        return UserProfileResponse.builder()
+                .id(savedUser.getId())
+                .email(savedUser.getEmail())
+                .identityStatement(savedUser.getIdentityStatement())
+                .createdAt(savedUser.getCreatedAt())
+                .build();
     }
 
     public AdvancedUserStatsResponse getAdvancedStats(String email) {

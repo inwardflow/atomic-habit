@@ -13,17 +13,10 @@ on:
       - '.gitignore'
   pull_request:
     branches: [main, master]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
-      - '.github/workflows/**'
-      - 'docker-compose.yml'
-      - '.editorconfig'
-      - '.gitattributes'
-      - '.gitignore'
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

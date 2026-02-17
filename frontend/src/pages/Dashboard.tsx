@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Check, MessageSquare, LogOut, BarChart2, Heart, Moon, Sun, Bell, BellOff } from 'lucide-react';
+import { Plus, MessageSquare, LogOut, BarChart2, Heart, Moon, Sun, Bell, BellOff, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useHabits } from '../hooks/useHabits';
 import { useGoals } from '../hooks/useGoals';
@@ -15,7 +15,6 @@ import IdentityModal from '../components/IdentityModal';
 import IdentityScore from '../components/IdentityScore';
 import HabitHeatmap from '../components/HabitHeatmap';
 import MoodTracker from '../components/MoodTracker';
-import clsx from 'clsx';
 import api from '../api/axios';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
@@ -45,15 +44,15 @@ const Dashboard = () => {
           setGratitudeSubmitted(true);
           setMoodId(res.data.id);
         }
-      } catch (error) {
+      } catch {
         // No gratitude found for today, which is fine
       }
     };
     checkTodayGratitude();
   }, []);
 
-  // Fetch user profile on mount to check identity
-  const fetchUser = async () => {
+  // Fetch user profile
+  const fetchUser = useCallback(async () => {
     try {
       const res = await api.get('/users/me');
       setUser(res.data);
@@ -63,11 +62,11 @@ const Dashboard = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [setUser]);
 
   useEffect(() => {
     fetchUser();
-  }, [setUser]);
+  }, [fetchUser]);
 
   const handleRefresh = () => {
     fetchHabits();
@@ -95,7 +94,7 @@ const Dashboard = () => {
       refetchStats();
   };
 
-  const handleHabitUpdate = async (id: number, updates: any) => {
+  const handleHabitUpdate = async (id: number, updates: Partial<{ name: string; twoMinuteVersion: string; cueImplementationIntention: string; cueHabitStack: string; frequency: string[] }>) => {
       await updateHabit(id, updates);
       refetchStats();
   };
@@ -113,7 +112,7 @@ const Dashboard = () => {
             confetti({ particleCount: 50, spread: 50, origin: { y: 0.8 }, colors: ['#FCD34D', '#F87171'] });
           }
           setGratitudeSubmitted(true);
-      } catch (e) {
+      } catch {
           toast.error('Could not save.');
       }
   };
@@ -154,6 +153,13 @@ const Dashboard = () => {
               >
                 <BarChart2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Analytics</span>
+              </Link>
+              <Link 
+                to="/settings" 
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Settings</span>
               </Link>
               <button 
                 onClick={logout} 
@@ -259,7 +265,12 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {habits.map((habit) => (
+              {[...habits].sort((a, b) => {
+                // Scheduled today first, rest days at the bottom
+                if (a.scheduledToday !== false && b.scheduledToday === false) return -1;
+                if (a.scheduledToday === false && b.scheduledToday !== false) return 1;
+                return 0;
+              }).map((habit) => (
                 <HabitCard
                     key={habit.id}
                     habit={habit}

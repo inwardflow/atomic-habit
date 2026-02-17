@@ -4,7 +4,6 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { Award, Flame, Trophy, Footprints, Star, Diamond, Activity, HeartPulse, History, ChevronDown, ArrowLeft, Sun, Moon, Calendar, Zap, TrendingUp, Sunrise } from 'lucide-react';
 import api from '../api/axios';
 import type { AdvancedUserStats, Badge, MoodInsight, MoodLog, Page } from '../types';
-import clsx from 'clsx';
 import { format, subDays } from 'date-fns';
 
 const BadgeIcon = ({ icon, className }: { icon: string, className?: string }) => {

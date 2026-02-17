@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
-import type { Goal, GoalRequest } from '../types';
+import type { Goal, GoalRequest, HabitRequest } from '../types';
 import toast from 'react-hot-toast';
 
 export const useGoals = () => {
@@ -39,7 +39,7 @@ export const useGoals = () => {
   // Since habits are created with the goal in our backend implementation,
   // we might want to refresh goals to see them, or just rely on the response.
   
-  const addHabitsToGoal = async (goalId: number, habits: any[]) => {
+  const addHabitsToGoal = async (goalId: number, habits: HabitRequest[]) => {
       try {
           const response = await api.post<Goal>(`/goals/${goalId}/habits`, habits);
           setGoals(prev => prev.map(g => g.id === goalId ? response.data : g));

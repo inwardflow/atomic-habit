@@ -67,7 +67,7 @@ export const useHabits = () => {
           await api.put(`/habits/${id}`, updates);
           toast.success('Habit updated');
           fetchHabits();
-      } catch (err) {
+      } catch {
           toast.error('Failed to update habit');
       }
   };
@@ -77,7 +77,7 @@ export const useHabits = () => {
           await api.patch(`/habits/${id}/status`, {});
           toast.success('Habit status updated');
           fetchHabits();
-      } catch (err) {
+      } catch {
           toast.error('Failed to update status');
       }
   };
@@ -87,7 +87,7 @@ export const useHabits = () => {
           await api.delete(`/habits/${id}`);
           toast.success('Habit deleted');
           fetchHabits();
-      } catch (err) {
+      } catch {
           toast.error('Failed to delete habit');
       }
   };

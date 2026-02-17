@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    Zap, Target, BatteryLow, Wind, Smile, Frown, Flame, Minus, 
-    MessageSquare, Check, X, CloudLightning, Coffee, Sun, CloudRain
+    Zap, Target, BatteryLow, Wind, Smile, Flame, Minus, 
+    MessageSquare, Check, Sun, CloudRain
 } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -55,7 +55,7 @@ const MoodTracker = () => {
             setSelectedMood(null);
             setNote('');
             setShowNoteInput(false);
-        } catch (error) {
+        } catch {
             toast.error('Failed to log mood.');
         } finally {
             setIsSubmitting(false);

@@ -5,13 +5,17 @@ import JSON5 from 'json5';
 import { Calendar, Layers, Send, X, Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
-import api from '../api/axios';
+import api, { BACKEND_URL } from '../api/axios';
+import { runAgentWithRetry, classifyAgentError, getErrorToastMessage } from '../utils/agentRetry';
+import type { ClassifiedError } from '../utils/agentRetry';
+import { useAgentActivity } from '../hooks/useAgentActivity';
+import AgentActivityIndicator from './AgentActivityIndicator';
 import { useGoals } from '../hooks/useGoals';
 import { useHabits } from '../hooks/useHabits';
 import { useAuthStore } from '../store/authStore';
 import type { GoalRequest, HabitRequest } from '../types';
 
-const AGENT_RUN_URL = 'http://localhost:8080/agui/run';
+const AGENT_RUN_URL = `${BACKEND_URL}/agui/run`;
 
 const STARTER_PROMPTS = [
   'I feel a bit overwhelmed. Walk me through 3 tiny first steps.',
@@ -57,14 +61,6 @@ interface GoalPlan {
 }
 
 type PlanPayload = GoalPlan | PlanHabit[];
-
-const TypingIndicator = () => (
-  <div className="flex space-x-1 rounded-lg bg-gray-100 p-2 w-fit">
-    <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></div>
-    <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></div>
-    <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400"></div>
-  </div>
-);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -155,16 +151,17 @@ const isAssistantRole = (role: unknown): boolean => {
 };
 
 const getLastAssistantContent = (messages: Message[]): string => {
-  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as any).role));
+  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as unknown as AgentMessageShape).role));
   if (!lastAssistant) return '';
   return buildRenderableContent(lastAssistant as unknown as AgentMessageShape).trim();
 };
 
 const getLastAssistantSignature = (messages: Message[]): string => {
-  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as any).role));
+  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as unknown as AgentMessageShape).role));
   if (!lastAssistant) return '';
-  const id = typeof (lastAssistant as any).id === 'string' ? (lastAssistant as any).id : '';
-  const content = buildRenderableContent(lastAssistant as unknown as AgentMessageShape).trim();
+  const shape = lastAssistant as unknown as AgentMessageShape;
+  const id = typeof shape.id === 'string' ? shape.id : '';
+  const content = buildRenderableContent(shape).trim();
   return `${id}::${content}`;
 };
 
@@ -274,6 +271,22 @@ const parseDisplayContent = (
     return match;
   });
 
+  // Fallback: match bare `replies ["..."]` lines that the AI sometimes emits
+  // without wrapping in a fenced code block.
+  if (replies.length === 0) {
+    displayContent = displayContent.replace(
+      /^\s*replies\s+(\[.*\])\s*$/gim,
+      (_match, jsonPart) => {
+        const parsed = tryParseJson(jsonPart);
+        if (isStringArray(parsed)) {
+          replies = parsed;
+          return '';
+        }
+        return _match;
+      }
+    );
+  }
+
   displayContent = displayContent.trim();
 
   const planMatch = displayContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
@@ -309,6 +322,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedActionsRef = useRef<Set<string>>(new Set());
   const handledRunErrorSignaturesRef = useRef<Set<string>>(new Set());
+
+  // Agent activity tracking
+  const { activity, processEvent, markRunStart, markRunError, reset: resetActivity } = useAgentActivity();
 
   useEffect(() => {
     let active = true;
@@ -368,11 +384,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         setLoading(false);
       },
       onRawEvent: ({ event }) => {
-        const rawEvent = (event as any)?.rawEvent;
+        // Forward raw events to activity tracker
+        processEvent(event);
+
+        const rawEvent = (event as unknown as Record<string, unknown>)?.rawEvent as Record<string, unknown> | undefined;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof (event as unknown as Record<string, unknown>)?.runId === 'string' ? (event as unknown as Record<string, string>).runId : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
@@ -385,10 +404,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         toast.error('AG-UI returned an error from backend.');
       },
       onRunErrorEvent: ({ event }) => {
-        const errorText = typeof (event as any)?.message === 'string' ? (event as any).message.trim() : '';
+        const evtRecord = event as unknown as Record<string, unknown>;
+        const errorText = typeof evtRecord?.message === 'string' ? (evtRecord.message as string).trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof evtRecord?.runId === 'string' ? evtRecord.runId as string : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
@@ -405,12 +425,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
     return () => {
       unsubscribe();
       agentRef.current = null;
+      resetActivity();
     };
-  }, [handleRefreshAction, token, user]);
+  }, [handleRefreshAction, processEvent, resetActivity, token, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, activity]);
 
   const sendMessage = useCallback(
     async (text: string = input) => {
@@ -428,10 +449,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       agent.addMessage(message);
       setInput('');
       setLoading(true);
+      markRunStart();
 
       try {
         const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
-        const runResult = await agent.runAgent({ runId: `run-${Date.now()}` });
+        const runResult = await runAgentWithRetry(agent, { runId: `run-${Date.now()}` });
         const afterSignature = getLastAssistantSignature(agent.messages as Message[]);
 
         if (beforeSignature === afterSignature) {
@@ -448,13 +470,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           }
         }
       } catch (error) {
-        console.error('Agent run failed:', error);
-        toast.error('Connection failed');
+        const classified = error && typeof error === 'object' && 'kind' in error
+          ? (error as ClassifiedError)
+          : classifyAgentError(error);
+        console.error('Agent run failed:', classified.kind, classified.message);
+        toast.error(getErrorToastMessage(classified));
+        markRunError();
       } finally {
         setLoading(false);
       }
     },
-    [input, loading]
+    [input, loading, markRunStart, markRunError]
   );
 
   const handleWeeklyReview = useCallback(() => {
@@ -512,7 +538,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
             <button
               key={reply}
               onClick={() => void sendMessage(reply)}
-              className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50"
+              disabled={loading}
+              className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:opacity-50"
             >
               {reply}
             </button>
@@ -520,7 +547,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         </div>
       );
     },
-    [sendMessage]
+    [sendMessage, loading]
   );
 
   const renderMessageContent = useCallback(
@@ -676,8 +703,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
 
         {messages.length === 0 && loading && (
           <div className="mt-10 flex flex-col items-center justify-center space-y-2">
-            <TypingIndicator />
-            <p className="text-sm text-gray-400">Checking your habits...</p>
+            <AgentActivityIndicator activity={activity} compact />
           </div>
         )}
 
@@ -693,9 +719,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           </div>
         ))}
 
+        {/* Agent activity indicator replaces the old typing dots */}
         {loading && messages.length > 0 && (
           <div className="flex justify-start">
-            <TypingIndicator />
+            <div className="max-w-[85%]">
+              <AgentActivityIndicator activity={activity} compact />
+            </div>
           </div>
         )}
 
@@ -704,7 +733,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
 
       <div className="flex gap-2 border-t p-4">
         <input
-          className="flex-1 rounded border p-2 outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 rounded border p-2 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
@@ -712,7 +741,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
               void sendMessage();
             }
           }}
-          placeholder={shouldShowStarterGuide ? 'For example: where should I start?' : 'Ask a question...'}
+          disabled={loading}
+          placeholder={loading ? 'Coach is thinking...' : (shouldShowStarterGuide ? 'For example: where should I start?' : 'Ask a question...')}
         />
         <button
           onClick={() => void sendMessage()}

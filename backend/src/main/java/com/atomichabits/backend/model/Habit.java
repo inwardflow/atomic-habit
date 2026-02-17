@@ -42,6 +42,11 @@ public class Habit {
     @Builder.Default
     private boolean isActive = true;
 
+    // Frequency: JSON array of day names e.g. ["MONDAY","WEDNESDAY","FRIDAY"]
+    // null or empty means daily (every day)
+    @Column(columnDefinition = "TEXT")
+    private String frequencyJson;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

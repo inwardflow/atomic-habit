@@ -11,15 +11,18 @@ import com.atomichabits.backend.model.User;
 import com.atomichabits.backend.repository.HabitCompletionRepository;
 import com.atomichabits.backend.repository.HabitRepository;
 import com.atomichabits.backend.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,12 +31,52 @@ public class HabitService {
     private final HabitRepository habitRepository;
     private final HabitCompletionRepository habitCompletionRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
-    public HabitService(HabitRepository habitRepository, HabitCompletionRepository habitCompletionRepository, UserRepository userRepository) {
+    public HabitService(HabitRepository habitRepository, HabitCompletionRepository habitCompletionRepository,
+                        UserRepository userRepository, ObjectMapper objectMapper) {
         this.habitRepository = habitRepository;
         this.habitCompletionRepository = habitCompletionRepository;
         this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
     }
+
+    // --- Frequency helpers ---
+
+    private String toFrequencyJson(List<String> frequency) {
+        if (frequency == null || frequency.isEmpty()) return null;
+        try {
+            // Normalize to uppercase
+            List<String> normalized = frequency.stream()
+                    .map(String::toUpperCase)
+                    .collect(Collectors.toList());
+            return objectMapper.writeValueAsString(normalized);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    private List<String> fromFrequencyJson(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Check if a habit is scheduled for a given date based on its frequency.
+     * null/empty frequency = daily (always scheduled).
+     */
+    public boolean isScheduledForDate(Habit habit, LocalDate date) {
+        List<String> freq = fromFrequencyJson(habit.getFrequencyJson());
+        if (freq == null || freq.isEmpty()) return true; // daily
+        String dayName = date.getDayOfWeek().name(); // e.g. "MONDAY"
+        return freq.contains(dayName);
+    }
+
+    // --- CRUD ---
 
     public HabitResponse createHabit(String email, HabitRequest request) {
         User user = userRepository.findByEmail(email)
@@ -45,6 +88,7 @@ public class HabitService {
                 .twoMinuteVersion(request.getTwoMinuteVersion())
                 .cueImplementationIntention(request.getCueImplementationIntention())
                 .cueHabitStack(request.getCueHabitStack())
+                .frequencyJson(toFrequencyJson(request.getFrequency()))
                 .isActive(true)
                 .build();
 
@@ -63,6 +107,7 @@ public class HabitService {
                         .twoMinuteVersion(request.getTwoMinuteVersion())
                         .cueImplementationIntention(request.getCueImplementationIntention())
                         .cueHabitStack(request.getCueHabitStack())
+                        .frequencyJson(toFrequencyJson(request.getFrequency()))
                         .isActive(true)
                         .build())
                 .collect(Collectors.toList());
@@ -89,6 +134,7 @@ public class HabitService {
         habit.setTwoMinuteVersion(request.getTwoMinuteVersion());
         habit.setCueImplementationIntention(request.getCueImplementationIntention());
         habit.setCueHabitStack(request.getCueHabitStack());
+        habit.setFrequencyJson(toFrequencyJson(request.getFrequency()));
 
         Habit updatedHabit = habitRepository.save(habit);
         
@@ -99,7 +145,7 @@ public class HabitService {
                 habit.getId(), startOfDay, endOfDay);
         
         List<HabitCompletion> completions = habitCompletionRepository.findByHabitIdOrderByCompletedAtDesc(habit.getId());
-        int currentStreak = calculateCurrentStreak(completions);
+        int currentStreak = calculateCurrentStreak(completions, updatedHabit);
         
         return mapToResponse(updatedHabit, completedToday, currentStreak);
     }
@@ -125,7 +171,7 @@ public class HabitService {
                 habit.getId(), startOfDay, endOfDay);
         
         List<HabitCompletion> completions = habitCompletionRepository.findByHabitIdOrderByCompletedAtDesc(habit.getId());
-        int currentStreak = calculateCurrentStreak(completions);
+        int currentStreak = calculateCurrentStreak(completions, savedHabit);
         
         return mapToResponse(savedHabit, completedToday, currentStreak);
     }
@@ -142,14 +188,6 @@ public class HabitService {
             throw new UnauthorizedException("You are not authorized to delete this habit");
         }
         
-        // Delete completions first (if not cascading)
-        // Assuming JPA/DB cascade might not be set, let's be safe or rely on DB.
-        // Actually, let's just delete the habit and let Hibernate handle it if configured, 
-        // or manually delete completions if needed. 
-        // For safety in this "Anti-Anxiety" app, maybe we just set it to inactive? 
-        // But user specifically requested DELETE.
-        // Let's try hard delete. If it fails due to FK, we'll know.
-        // Better: delete completions first to be sure.
         habitCompletionRepository.deleteAll(habitCompletionRepository.findByHabitUserId(user.getId())
                 .stream().filter(c -> c.getHabit().getId().equals(habitId)).collect(Collectors.toList()));
 
@@ -167,17 +205,17 @@ public class HabitService {
         List<HabitCompletion> allCompletions = habitCompletionRepository.findByHabitUserId(user.getId());
         
         // Group completions by habit ID
-        java.util.Map<Long, List<HabitCompletion>> completionsByHabit = allCompletions.stream()
+        Map<Long, List<HabitCompletion>> completionsByHabit = allCompletions.stream()
                 .collect(Collectors.groupingBy(c -> c.getHabit().getId()));
 
         return habitRepository.findByUserId(user.getId()).stream()
                 .map(habit -> {
-                    List<HabitCompletion> habitCompletions = completionsByHabit.getOrDefault(habit.getId(), java.util.Collections.emptyList());
+                    List<HabitCompletion> habitCompletions = completionsByHabit.getOrDefault(habit.getId(), Collections.emptyList());
                     
                     boolean completedToday = habitCompletions.stream()
                             .anyMatch(c -> !c.getCompletedAt().isBefore(startOfDay) && !c.getCompletedAt().isAfter(endOfDay));
                     
-                    int currentStreak = calculateCurrentStreak(habitCompletions);
+                    int currentStreak = calculateCurrentStreak(habitCompletions, habit);
                     
                     return mapToResponse(habit, completedToday, currentStreak);
                 })
@@ -251,18 +289,14 @@ public class HabitService {
 
         List<HabitCompletion> completions = habitCompletionRepository.findByHabitIdOrderByCompletedAtDesc(habitId);
         
-        // Calculate current streak
-        int currentStreak = calculateCurrentStreak(completions);
-        
-        // Calculate longest streak
-        int longestStreak = calculateLongestStreak(completions);
-        
-        // Calculate total completions
+        int currentStreak = calculateCurrentStreak(completions, habit);
+        int longestStreak = calculateLongestStreak(completions, habit);
         int totalCompletions = completions.size();
         
-        // Calculate completion rate (completions / days since creation)
+        // Calculate completion rate considering frequency
         long daysSinceCreation = ChronoUnit.DAYS.between(habit.getCreatedAt().toLocalDate(), LocalDate.now()) + 1;
-        double completionRate = daysSinceCreation > 0 ? (double) totalCompletions / daysSinceCreation : 0;
+        long scheduledDays = countScheduledDays(habit, habit.getCreatedAt().toLocalDate(), LocalDate.now());
+        double completionRate = scheduledDays > 0 ? (double) totalCompletions / scheduledDays : 0;
 
         return HabitStatsResponse.builder()
                 .habitId(habitId)
@@ -273,6 +307,67 @@ public class HabitService {
                 .build();
     }
 
+    /**
+     * Count how many days between start and end (inclusive) are scheduled for this habit.
+     */
+    private long countScheduledDays(Habit habit, LocalDate start, LocalDate end) {
+        List<String> freq = fromFrequencyJson(habit.getFrequencyJson());
+        if (freq == null || freq.isEmpty()) {
+            return ChronoUnit.DAYS.between(start, end) + 1;
+        }
+        Set<DayOfWeek> scheduledDays = freq.stream()
+                .map(DayOfWeek::valueOf)
+                .collect(Collectors.toSet());
+        long count = 0;
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (scheduledDays.contains(d.getDayOfWeek())) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Calculate current streak, respecting frequency schedule.
+     * Only counts scheduled days; non-scheduled days are skipped.
+     */
+    public int calculateCurrentStreak(List<HabitCompletion> completions, Habit habit) {
+        if (completions.isEmpty()) return 0;
+        
+        Set<LocalDate> completedDates = completions.stream()
+                .map(c -> c.getCompletedAt().toLocalDate())
+                .collect(Collectors.toSet());
+        
+        LocalDate today = LocalDate.now();
+        LocalDate checkDate = today;
+        
+        // If today is scheduled but not completed, start from yesterday
+        if (isScheduledForDate(habit, today) && !completedDates.contains(today)) {
+            checkDate = today.minusDays(1);
+        }
+        
+        int streak = 0;
+        // Walk backwards, skipping non-scheduled days
+        while (true) {
+            if (isScheduledForDate(habit, checkDate)) {
+                if (completedDates.contains(checkDate)) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+            // Don't go beyond habit creation
+            if (habit.getCreatedAt() != null && checkDate.isBefore(habit.getCreatedAt().toLocalDate())) {
+                break;
+            }
+            checkDate = checkDate.minusDays(1);
+            // Safety: don't go back more than 365 days
+            if (ChronoUnit.DAYS.between(checkDate, today) > 365) break;
+        }
+        return streak;
+    }
+
+    /**
+     * Overload for backward compatibility (daily habits).
+     */
     public int calculateCurrentStreak(List<HabitCompletion> completions) {
         if (completions.isEmpty()) return 0;
         
@@ -287,7 +382,6 @@ public class HabitService {
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
         
-        // Check if latest completion is today or yesterday
         LocalDate latest = dates.get(0);
         if (!latest.equals(today) && !latest.equals(yesterday)) {
             return 0;
@@ -308,33 +402,32 @@ public class HabitService {
         return streak;
     }
 
-    private int calculateLongestStreak(List<HabitCompletion> completions) {
+    private int calculateLongestStreak(List<HabitCompletion> completions, Habit habit) {
         if (completions.isEmpty()) return 0;
 
-        List<LocalDate> dates = completions.stream()
+        Set<LocalDate> completedDates = completions.stream()
                 .map(c -> c.getCompletedAt().toLocalDate())
-                .distinct()
-                .sorted()
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
-        if (dates.isEmpty()) return 0;
+        if (completedDates.isEmpty()) return 0;
 
-        int maxStreak = 1;
-        int currentStreak = 1;
-        LocalDate prevDate = dates.get(0);
+        LocalDate start = completedDates.stream().min(Comparator.naturalOrder()).get();
+        LocalDate end = completedDates.stream().max(Comparator.naturalOrder()).get();
 
-        for (int i = 1; i < dates.size(); i++) {
-            LocalDate currentDate = dates.get(i);
-            if (currentDate.equals(prevDate.plusDays(1))) {
+        int maxStreak = 0;
+        int currentStreak = 0;
+
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            if (!isScheduledForDate(habit, d)) continue; // skip non-scheduled days
+            if (completedDates.contains(d)) {
                 currentStreak++;
-            } else {
                 maxStreak = Math.max(maxStreak, currentStreak);
-                currentStreak = 1;
+            } else {
+                currentStreak = 0;
             }
-            prevDate = currentDate;
         }
-        
-        return Math.max(maxStreak, currentStreak);
+
+        return maxStreak;
     }
 
     private HabitResponse mapToResponse(Habit habit, boolean completedToday, int currentStreak) {
@@ -346,7 +439,9 @@ public class HabitService {
                 .cueHabitStack(habit.getCueHabitStack())
                 .isActive(habit.isActive())
                 .completedToday(completedToday)
+                .scheduledToday(isScheduledForDate(habit, LocalDate.now()))
                 .currentStreak(currentStreak)
+                .frequency(fromFrequencyJson(habit.getFrequencyJson()))
                 .createdAt(habit.getCreatedAt())
                 .build();
     }

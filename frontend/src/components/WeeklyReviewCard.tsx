@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Calendar, TrendingUp } from 'lucide-react';
+import { Trophy, TrendingUp } from 'lucide-react';
 
 interface WeeklyReviewCardProps {
   stats: {

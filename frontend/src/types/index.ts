@@ -6,6 +6,7 @@ export interface Habit {
   cueHabitStack: string;
   isActive: boolean;
   completedToday: boolean;
+  scheduledToday: boolean;
   currentStreak?: number;
   goalId?: number;
   frequency?: string[];
@@ -96,7 +97,7 @@ export interface Page<T> {
   last: boolean;
   size: number;
   number: number;
-  sort: any;
+  sort: { sorted: boolean; unsorted: boolean; empty: boolean };
   numberOfElements: number;
   first: boolean;
   empty: boolean;

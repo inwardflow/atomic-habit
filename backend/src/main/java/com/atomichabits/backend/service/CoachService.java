@@ -1,5 +1,6 @@
 package com.atomichabits.backend.service;
 
+import lombok.extern.slf4j.Slf4j;
 import com.atomichabits.backend.dto.HabitResponse;
 import com.atomichabits.backend.dto.UserProfileResponse;
 import com.atomichabits.backend.dto.UserStatsResponse;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class CoachService {
     private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
@@ -46,6 +48,9 @@ public class CoachService {
 
     @Value("${agentscope.model.model-name}")
     private String modelName;
+
+    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
+    private String baseUrl;
 
     @Value("${agentscope.enabled:true}")
     private boolean agentscopeEnabled;
@@ -503,10 +508,20 @@ public class CoachService {
                 .apply();
 
         // Initialize Model
+        // Configure HTTP transport with explicit timeouts to prevent hanging connections
+        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
+                .connectTimeout(java.time.Duration.ofSeconds(30))
+                .readTimeout(java.time.Duration.ofMinutes(3))
+                .writeTimeout(java.time.Duration.ofSeconds(30))
+                .build();
+        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
+                .config(transportConfig)
+                .build();
         var modelBuilder = OpenAIChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(modelName)
-                .baseUrl("https://api.siliconflow.com/v1");
+                .baseUrl(baseUrl)
+                .httpTransport(httpTransport);
 
         // Allow backend engineers to explicitly enable/disable proxy via YAML.
         if (proxyEnabled) {
@@ -517,10 +532,10 @@ public class CoachService {
                     System.setProperty("https.proxyHost", proxyHost);
                     System.setProperty("https.proxyPort", String.valueOf(proxyPort));
                 } catch (Exception e) {
-                    System.err.println("Failed to configure proxy: " + e.getMessage());
+                    log.warn("Failed to configure proxy: {}", e.getMessage());
                 }
             } else {
-                System.err.println("Proxy is enabled but host/port is invalid. Skipping proxy configuration.");
+                log.warn("Proxy is enabled but host/port is invalid — skipping proxy configuration.");
             }
         }
 

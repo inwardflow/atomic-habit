@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Target, CheckCircle2, ArrowRight } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { Target, CheckCircle2 } from 'lucide-react';
 
 interface DailyFocusCardProps {
   habitName: string;

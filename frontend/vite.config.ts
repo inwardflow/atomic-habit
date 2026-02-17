@@ -35,4 +35,42 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/agui': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    sourcemap: false,
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          // Charting library (heavy)
+          'vendor-recharts': ['recharts'],
+          // Animation library
+          'vendor-framer': ['framer-motion'],
+          // UI utilities
+          'vendor-ui': ['lucide-react', 'react-hot-toast', 'canvas-confetti', 'clsx', 'tailwind-merge'],
+          // Data & state
+          'vendor-data': ['axios', 'zustand', 'date-fns'],
+          // Markdown, AG-UI & JSON parsing
+          'vendor-content': ['react-markdown', '@ag-ui/client', 'json5'],
+        },
+      },
+    },
+  },
+  esbuild: {
+    drop: ['debugger'],
+    pure: ['console.log', 'console.debug'],
+  },
 })

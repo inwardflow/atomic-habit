@@ -6,15 +6,21 @@ import ReactMarkdown from 'react-markdown';
 import JSON5 from 'json5';
 import toast from 'react-hot-toast';
 import { generateWeeklyReview, getCoachMemoryHits, getGreeting, getChatHistory, getWeeklyReviews } from '../api/coach';
+import { BACKEND_URL } from '../api/axios';
+import { runAgentWithRetry, classifyAgentError, getErrorToastMessage } from '../utils/agentRetry';
+import type { ClassifiedError } from '../utils/agentRetry';
+import { useAgentActivity } from '../hooks/useAgentActivity';
+import AgentActivityIndicator from '../components/AgentActivityIndicator';
 import type { CoachMemoryHitsResponse, WeeklyReviewRecord } from '../api/coach';
 import WeeklyReviewCard from '../components/WeeklyReviewCard';
 import DailyFocusCard from '../components/DailyFocusCard';
+import CoachMemorySidebar from '../components/CoachMemorySidebar';
 import { useHabits } from '../hooks/useHabits';
 
 interface Message {
     id: string;
     role: string;
-    content: string | any;
+    content: string;
     timestamp?: string;
 }
 
@@ -31,6 +37,11 @@ interface ParsedHabitPlan {
     habits: HabitPlanItem[];
 }
 
+interface ToolCallData {
+    name: string;
+    arguments: Record<string, unknown>;
+}
+
 interface ParsedWeeklyReview {
     stats: {
       totalCompleted: number;
@@ -40,8 +51,6 @@ interface ParsedWeeklyReview {
     highlights: string[];
     suggestion: string;
 }
-
-import CoachMemorySidebar from '../components/CoachMemorySidebar';
 
 const parseToolArguments = (rawArgs: unknown): Record<string, unknown> => {
   if (typeof rawArgs === 'string') {
@@ -71,8 +80,9 @@ const buildToolCallBlocks = (toolCalls: unknown): string => {
   const blocks = toolCalls
     .map((call) => {
       if (!call || typeof call !== 'object') return '';
-      const functionObject = (call as any).function;
-      const name = typeof functionObject?.name === 'string' ? functionObject.name : '';
+      const functionObject = (call as Record<string, unknown>).function as Record<string, unknown> | undefined;
+      if (!functionObject) return '';
+      const name = typeof functionObject.name === 'string' ? functionObject.name : '';
       if (!name) return '';
 
       const payload = {
@@ -87,7 +97,7 @@ const buildToolCallBlocks = (toolCalls: unknown): string => {
   return blocks.join('\n\n');
 };
 
-const buildRenderableContent = (message: any): string => {
+const buildRenderableContent = (message: Record<string, unknown>): string => {
   const textContent =
     typeof message?.content === 'string'
       ? message.content
@@ -114,14 +124,14 @@ const isAssistantRole = (role: unknown): boolean => {
 const getLastAssistantContent = (messages: Message[]): string => {
   const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole(msg.role));
   if (!lastAssistant) return '';
-  return buildRenderableContent(lastAssistant).trim();
+  return buildRenderableContent(lastAssistant as unknown as Record<string, unknown>).trim();
 };
 
 const getLastAssistantSignature = (messages: Message[]): string => {
   const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole(msg.role));
   if (!lastAssistant) return '';
   const id = typeof lastAssistant.id === 'string' ? lastAssistant.id : '';
-  const content = buildRenderableContent(lastAssistant).trim();
+  const content = buildRenderableContent(lastAssistant as unknown as Record<string, unknown>).trim();
   return `${id}::${content}`;
 };
 
@@ -203,13 +213,17 @@ const CoachPage = () => {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const { addHabits } = useHabits();
+
+  // Agent activity tracking
+  const { activity, processEvent, markRunStart, markRunError, reset: resetActivity } = useAgentActivity();
+
   const coldStartPrompts = [
     "我现在有点茫然，请你带我3步开始，越简单越好。",
     "先问我3个问题，帮我找到第一个2分钟习惯。",
     "按我今天的状态，给我一个最小可执行动作。"
   ];
 
-  const normalizePlanItem = (habit: any, index: number): HabitPlanItem => {
+  const normalizePlanItem = (habit: Record<string, unknown>, index: number): HabitPlanItem => {
     const fallbackName = `Habit ${index + 1}`;
     const name = typeof habit?.name === 'string' && habit.name.trim() ? habit.name.trim() : fallbackName;
     const twoMinuteVersion = typeof habit?.twoMinuteVersion === 'string' && habit.twoMinuteVersion.trim()
@@ -230,19 +244,20 @@ const CoachPage = () => {
     };
   };
 
-  const parseHabitPlan = (candidate: any): ParsedHabitPlan | null => {
+  const parseHabitPlan = (candidate: unknown): ParsedHabitPlan | null => {
     if (!candidate) return null;
+    const obj = candidate as Record<string, unknown>;
 
-    let rawHabits: any[] | null = null;
+    let rawHabits: Record<string, unknown>[] | null = null;
     let title: string | undefined;
     let description: string | undefined;
 
     if (Array.isArray(candidate)) {
-      rawHabits = candidate;
-    } else if (typeof candidate === 'object' && Array.isArray(candidate.habits)) {
-      rawHabits = candidate.habits;
-      if (typeof candidate.goalName === 'string') title = candidate.goalName;
-      if (typeof candidate.description === 'string') description = candidate.description;
+      rawHabits = candidate as Record<string, unknown>[];
+    } else if (typeof candidate === 'object' && Array.isArray(obj.habits)) {
+      rawHabits = obj.habits as Record<string, unknown>[];
+      if (typeof obj.goalName === 'string') title = obj.goalName;
+      if (typeof obj.description === 'string') description = obj.description;
     }
 
     if (!rawHabits || rawHabits.length === 0) return null;
@@ -251,10 +266,11 @@ const CoachPage = () => {
     return habits.length > 0 ? { title, description, habits } : null;
   };
 
-  const parseWeeklyReview = (candidate: any): ParsedWeeklyReview | null => {
+  const parseWeeklyReview = (candidate: unknown): ParsedWeeklyReview | null => {
     if (!candidate || typeof candidate !== 'object') return null;
+    const obj = candidate as Record<string, unknown>;
 
-    const statsSource = candidate.stats && typeof candidate.stats === 'object' ? candidate.stats : candidate;
+    const statsSource = (obj.stats && typeof obj.stats === 'object' ? obj.stats : obj) as Record<string, unknown>;
     const totalCompletedRaw = statsSource.totalCompleted;
     const currentStreakRaw = statsSource.currentStreak;
     const bestStreakRaw = statsSource.bestStreak;
@@ -267,11 +283,11 @@ const CoachPage = () => {
       return null;
     }
 
-    const highlights = Array.isArray(candidate.highlights)
-      ? candidate.highlights.filter((h: unknown) => typeof h === 'string')
+    const highlights = Array.isArray(obj.highlights)
+      ? (obj.highlights as unknown[]).filter((h: unknown) => typeof h === 'string') as string[]
       : [];
-    const suggestion = typeof candidate.suggestion === 'string' && candidate.suggestion.trim()
-      ? candidate.suggestion.trim()
+    const suggestion = typeof obj.suggestion === 'string' && obj.suggestion.trim()
+      ? obj.suggestion.trim()
       : 'Keep going with small, consistent steps this week.';
 
     const parsed: ParsedWeeklyReview = {
@@ -295,7 +311,7 @@ const CoachPage = () => {
     setIsApplyingPlan(true);
     try {
       await addHabits(plan.habits);
-    } catch (error) {
+    } catch {
       toast.error('Failed to add plan');
     } finally {
       setIsApplyingPlan(false);
@@ -310,26 +326,22 @@ const CoachPage = () => {
     try {
       await addHabits([plan.habits[0]]);
       toast.success('Added the first tiny habit. Keep it easy.');
-    } catch (error) {
+    } catch {
       toast.error('Failed to add starter habit');
     } finally {
       setIsApplyingPlan(false);
     }
   };
 
-  // ... (keep parseMessageContent as is)
-
   const parseMessageContent = (content: string) => {
     if (typeof content !== 'string') return { text: JSON.stringify(content), suggestions: [], toolCall: null, plan: null, weeklyReview: null };
 
     let text = content;
     let suggestions: string[] = [];
-    let toolCall: any = null;
+    let toolCall: ToolCallData | null = null;
     let plan: ParsedHabitPlan | null = null;
     let weeklyReview: ParsedWeeklyReview | null = null;
 
-    // 1. Extract all markdown code blocks to check for JSON content
-    // This is more robust than regex matching specific JSON fields because it handles nested objects correctly
     const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
     let match;
     const codeBlocks = [];
@@ -337,10 +349,8 @@ const CoachPage = () => {
         codeBlocks.push({ fullMatch: match[0], inner: match[1].trim() });
     }
 
-    // Process code blocks to find tool calls or suggestions
     for (const block of codeBlocks) {
         let jsonStr = block.inner;
-        // Fix potential double braces if present (e.g. {{...}})
         while (jsonStr.startsWith('{{') && jsonStr.endsWith('}}')) {
              jsonStr = jsonStr.substring(1, jsonStr.length - 1);
         }
@@ -348,28 +358,20 @@ const CoachPage = () => {
         try {
             const parsed = JSON5.parse(jsonStr);
             
-            // Check for Tool Call
             if (parsed.name && parsed.arguments && !toolCall) {
-                toolCall = parsed;
+                toolCall = parsed as ToolCallData;
                 text = text.replace(block.fullMatch, '').trim();
                 continue; 
             }
 
-            // Check for Suggestions (replies)
             if (parsed.replies && Array.isArray(parsed.replies)) {
                 suggestions = parsed.replies;
-                // Only remove if it's purely a control JSON or we want to hide it
-                // If it was a tool call that also had replies, we might have processed it above? 
-                // No, usually they are separate or same object.
-                // If same object, we might want to hide it too.
                 if (!toolCall || toolCall !== parsed) {
                      text = text.replace(block.fullMatch, '').trim();
                 }
             }
             
-            // Check for Array of suggestions (direct array)
             if (Array.isArray(parsed) && parsed.every(i => typeof i === 'string') && suggestions.length === 0) {
-                 // This matches the old `replies` format if it was just an array in a block
                  suggestions = parsed;
                  text = text.replace(block.fullMatch, '').trim();
             }
@@ -386,9 +388,27 @@ const CoachPage = () => {
                 text = text.replace(block.fullMatch, '').trim();
             }
 
-        } catch (e) {
+        } catch {
             // Not a valid JSON block, ignore
         }
+    }
+
+    // Fallback: match bare `replies ["..."]` lines
+    if (suggestions.length === 0) {
+      text = text.replace(
+        /^\s*replies\s+(\[.*\])\s*$/gim,
+        (_match: string, jsonPart: string) => {
+          try {
+            const parsed = JSON5.parse(jsonPart);
+            if (Array.isArray(parsed) && parsed.every((i: unknown) => typeof i === 'string')) {
+              suggestions = parsed;
+              return '';
+            }
+          } catch { /* not valid JSON */ }
+          return _match;
+        }
+      );
+      text = text.trim();
     }
 
     return { text, suggestions, toolCall, plan, weeklyReview };
@@ -411,19 +431,18 @@ const CoachPage = () => {
   useEffect(() => {
     // Initialize Agent
     const newAgent = new HttpAgent({
-      url: 'http://localhost:8080/agui/run',
-      // @ts-ignore
+      url: `${BACKEND_URL}/agui/run`,
       threadId: 'user-' + (user ? user.id : Date.now()),
       ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
     });
 
     const { unsubscribe } = newAgent.subscribe({
       onMessagesChanged: ({ messages: msgs }) => {
-        const formattedMessages: Message[] = msgs.map((m: any) => ({
+        const formattedMessages: Message[] = msgs.map((m: Record<string, unknown>) => ({
             id: typeof m.id === 'string' ? m.id : `msg-${Date.now()}-${Math.random()}`,
             role: typeof m.role === 'string' ? m.role.toLowerCase() : 'assistant',
             content: buildRenderableContent(m),
-            timestamp: m.timestamp
+            timestamp: m.timestamp as string | undefined
         }));
         setMessages(formattedMessages);
 
@@ -439,16 +458,19 @@ const CoachPage = () => {
         }
       },
       onRawEvent: ({ event }) => {
-        const rawEvent = (event as any)?.rawEvent;
+        // Forward raw events to activity tracker
+        processEvent(event);
+
+        const evtRaw = event as unknown as Record<string, unknown>;
+        const rawEvent = evtRaw?.rawEvent as Record<string, unknown> | undefined;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof evtRaw?.runId === 'string' ? evtRaw.runId as string : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
 
-        // @ts-ignore
         newAgent.addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -457,15 +479,15 @@ const CoachPage = () => {
         toast.error('AG-UI returned an error from backend.');
       },
       onRunErrorEvent: ({ event }) => {
-        const errorText = typeof (event as any)?.message === 'string' ? (event as any).message.trim() : '';
+        const errEvt = event as unknown as Record<string, unknown>;
+        const errorText = typeof errEvt?.message === 'string' ? (errEvt.message as string).trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof errEvt?.runId === 'string' ? errEvt.runId as string : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
 
-        // @ts-ignore
         newAgent.addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -479,8 +501,9 @@ const CoachPage = () => {
 
     return () => {
       unsubscribe();
+      resetActivity();
     };
-  }, [user, token, loadMemoryHitsForMessage]);
+  }, [user, token, loadMemoryHitsForMessage, processEvent, resetActivity]);
 
   // Load chat history or greeting
   useEffect(() => {
@@ -533,7 +556,7 @@ const CoachPage = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, activity]);
 
   const loadWeeklyReviewHistory = async () => {
     try {
@@ -555,18 +578,18 @@ const CoachPage = () => {
 
     const userMsg = {
       id: `msg-${Date.now()}`,
-      role: 'user',
+      role: 'user' as const,
       content: textToSend,
     };
 
-    // @ts-ignore
     agent.addMessage(userMsg);
     if (!textOverride) setInput('');
     setIsLoading(true);
+    markRunStart();
     
     try {
       const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
-      const runResult = await agent.runAgent({ runId: `run-${Date.now()}` });
+      const runResult = await runAgentWithRetry(agent, { runId: `run-${Date.now()}` });
       const afterSignature = getLastAssistantSignature(agent.messages as Message[]);
 
       if (beforeSignature === afterSignature) {
@@ -574,19 +597,20 @@ const CoachPage = () => {
         const lastAssistantContent = getLastAssistantContent(agent.messages as Message[]);
 
         if (recovered && recovered !== lastAssistantContent) {
-          const recoveredMessage: Message = {
+          agent.addMessage({
             id: `result-${Date.now()}`,
-            role: 'assistant',
+            role: 'assistant' as const,
             content: recovered,
-            timestamp: new Date().toISOString(),
-          };
-          // @ts-ignore
-          agent.addMessage(recoveredMessage);
+          });
         }
       }
-    } catch (e) {
-      console.error('Agent run failed:', e);
-      toast.error('Failed to send message. Check AG-UI backend connectivity.');
+    } catch (error) {
+      const classified = error && typeof error === 'object' && 'kind' in error
+        ? (error as ClassifiedError)
+        : classifyAgentError(error);
+      console.error('Agent run failed:', classified.kind, classified.message);
+      toast.error(getErrorToastMessage(classified));
+      markRunError();
     } finally {
       setIsLoading(false);
     }
@@ -604,11 +628,11 @@ const CoachPage = () => {
 
     setMessages((prev) => [...prev, promptMessage]);
     if (agent) {
-      // @ts-ignore
       agent.addMessage({ id: promptMessage.id, role: 'user', content: promptMessage.content });
     }
 
     setIsLoading(true);
+    markRunStart();
     try {
       const result = await generateWeeklyReview();
       const aiMessage: Message = {
@@ -620,7 +644,6 @@ const CoachPage = () => {
 
       setMessages((prev) => [...prev, aiMessage]);
       if (agent) {
-        // @ts-ignore
         agent.addMessage({ id: aiMessage.id, role: 'assistant', content: aiMessage.content });
       }
       await loadWeeklyReviewHistory();
@@ -628,6 +651,7 @@ const CoachPage = () => {
     } catch (error) {
       toast.error('Failed to generate weekly review');
       console.error('Failed to generate weekly review', error);
+      markRunError();
     } finally {
       setIsLoading(false);
     }
@@ -734,7 +758,7 @@ const CoachPage = () => {
                 </div>
             )}
             {/* Messages */}
-            {messages.length === 0 && (
+            {messages.length === 0 && !isLoading && (
                 <div className="text-center text-gray-500 mt-10">
                     <Bot size={48} className="mx-auto mb-2 opacity-50" />
                     <p>Start chatting with your Atomic Habits Coach!</p>
@@ -792,8 +816,8 @@ const CoachPage = () => {
                             <h3 className="font-semibold text-gray-800 mb-2">Coach Proposal</h3>
                             {toolCall.name === 'create_first_habit' && (
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><span className="font-medium text-gray-700">Habit:</span> {toolCall.arguments.habitName}</p>
-                                    <p><span className="font-medium text-gray-700">2-Min Version:</span> {toolCall.arguments.twoMinuteVersion}</p>
+                                    <p><span className="font-medium text-gray-700">Habit:</span> {String(toolCall.arguments.habitName ?? '')}</p>
+                                    <p><span className="font-medium text-gray-700">2-Min Version:</span> {String(toolCall.arguments.twoMinuteVersion ?? '')}</p>
                                     <div className="pt-2 flex gap-2">
                                         <button 
                                             onClick={() => handleSend("Yes, let's set it up!")}
@@ -813,18 +837,18 @@ const CoachPage = () => {
                             {toolCall.name === 'present_weekly_review' && (
                                 <WeeklyReviewCard 
                                     stats={{
-                                        totalCompleted: toolCall.arguments.totalCompleted || 0,
-                                        currentStreak: toolCall.arguments.currentStreak || 0
+                                        totalCompleted: Number(toolCall.arguments.totalCompleted) || 0,
+                                        currentStreak: Number(toolCall.arguments.currentStreak) || 0
                                     }}
-                                    highlights={toolCall.arguments.highlights || []}
-                                    suggestion={toolCall.arguments.suggestion || "Keep going!"}
+                                    highlights={(toolCall.arguments.highlights as string[]) || []}
+                                    suggestion={String(toolCall.arguments.suggestion ?? 'Keep going!')}
                                 />
                             )}
                             {toolCall.name === 'present_daily_focus' && (
                                 <div className="max-w-md w-full">
                                     <DailyFocusCard
-                                        habitName={toolCall.arguments.habitName}
-                                        twoMinuteVersion={toolCall.arguments.twoMinuteVersion || toolCall.arguments.habitName}
+                                        habitName={String(toolCall.arguments.habitName ?? '')}
+                                        twoMinuteVersion={String(toolCall.arguments.twoMinuteVersion || toolCall.arguments.habitName || '')}
                                         onComplete={(habitName) => {
                                             handleSend(`I completed ${habitName}!`);
                                         }}
@@ -833,7 +857,7 @@ const CoachPage = () => {
                             )}
                             {toolCall.name === 'save_user_identity' && (
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><span className="font-medium text-gray-700">Identity:</span> {toolCall.arguments.identity}</p>
+                                    <p><span className="font-medium text-gray-700">Identity:</span> {String(toolCall.arguments.identity ?? '')}</p>
                                     <div className="pt-2 flex gap-2">
                                         <button 
                                             onClick={() => handleSend("Yes, that's who I want to be!")}
@@ -846,7 +870,7 @@ const CoachPage = () => {
                             )}
                              {!handledToolNames.includes(toolCall.name) && (
                                 <div className="text-xs text-gray-500">
-                                    <p className="font-medium text-gray-700">Tool: {toolCall.name}</p>
+                                    <p className="font-medium text-gray-700">Tool: {String(toolCall.name)}</p>
                                     <pre className="mt-1 bg-gray-50 p-2 rounded overflow-x-auto border border-gray-200">
                                         {JSON.stringify(toolCall.arguments, null, 2)}
                                     </pre>
@@ -905,7 +929,8 @@ const CoachPage = () => {
                                 <button
                                     key={idx}
                                     onClick={() => handleSend(suggestion)}
-                                    className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full hover:bg-blue-200 transition-colors border border-blue-200"
+                                    disabled={isLoading}
+                                    className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full hover:bg-blue-200 transition-colors border border-blue-200 disabled:opacity-50"
                                 >
                                     {suggestion}
                                 </button>
@@ -915,6 +940,16 @@ const CoachPage = () => {
                 </div>
               );
             })}
+
+            {/* Agent Activity Indicator - replaces simple loading spinner */}
+            {isLoading && (
+              <div className="flex flex-col items-start">
+                <div className="max-w-[80%]">
+                  <AgentActivityIndicator activity={activity} />
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
         </div>
         <div className="flex gap-2">
