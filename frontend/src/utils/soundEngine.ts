@@ -10,12 +10,12 @@ class SoundEngine {
 
   constructor() {
     try {
-      const AudioContextClass = (window.AudioContext || (window as any).webkitAudioContext);
+      const AudioContextClass = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
       if (AudioContextClass) {
         this.ctx = new AudioContextClass();
       }
-    } catch (e) {
-      console.error("Web Audio API not supported", e);
+    } catch (err) {
+      console.error("Web Audio API not supported", err);
     }
   }
 
@@ -88,12 +88,12 @@ class SoundEngine {
          // Fade out
          try {
              this.gainNode.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + 1);
-         } catch(e) {}
+         } catch { /* ignore */ }
       }
       
       const node = this.whiteNoiseNode;
       setTimeout(() => {
-          try { node.stop(); } catch(e) {}
+          try { node.stop(); } catch { /* ignore */ }
       }, 1000);
       
       this.isPlaying = false;

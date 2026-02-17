@@ -4,6 +4,7 @@ import com.atomichabits.backend.dto.GoalRequest;
 import com.atomichabits.backend.dto.GoalResponse;
 import com.atomichabits.backend.dto.HabitRequest;
 import com.atomichabits.backend.service.GoalService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class GoalController {
     }
 
     @PostMapping
-    public ResponseEntity<GoalResponse> createGoal(Authentication authentication, @RequestBody GoalRequest request) {
+    public ResponseEntity<GoalResponse> createGoal(Authentication authentication, @Valid @RequestBody GoalRequest request) {
         return ResponseEntity.ok(goalService.createGoal(authentication.getName(), request));
     }
 
@@ -36,7 +37,7 @@ public class GoalController {
     }
 
     @PostMapping("/{id}/habits")
-    public ResponseEntity<GoalResponse> addHabitsToGoal(Authentication authentication, @PathVariable Long id, @RequestBody List<HabitRequest> habits) {
+    public ResponseEntity<GoalResponse> addHabitsToGoal(Authentication authentication, @PathVariable Long id, @Valid @RequestBody List<HabitRequest> habits) {
         return ResponseEntity.ok(goalService.addHabitsToGoal(id, habits, authentication.getName()));
     }
 }

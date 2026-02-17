@@ -1,5 +1,6 @@
 package com.atomichabits.backend.service;
 
+import lombok.extern.slf4j.Slf4j;
 import com.atomichabits.backend.dto.HabitResponse;
 import com.atomichabits.backend.dto.UserProfileResponse;
 import com.atomichabits.backend.dto.UserStatsResponse;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 public class CoachService {
     private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
@@ -530,10 +532,10 @@ public class CoachService {
                     System.setProperty("https.proxyHost", proxyHost);
                     System.setProperty("https.proxyPort", String.valueOf(proxyPort));
                 } catch (Exception e) {
-                    System.err.println("Failed to configure proxy: " + e.getMessage());
+                    log.warn("Failed to configure proxy: {}", e.getMessage());
                 }
             } else {
-                System.err.println("Proxy is enabled but host/port is invalid. Skipping proxy configuration.");
+                log.warn("Proxy is enabled but host/port is invalid — skipping proxy configuration.");
             }
         }
 

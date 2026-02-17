@@ -9,10 +9,13 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Env files
+# Env files (NEVER commit secrets)
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
+!frontend/.env
+!frontend/.env.production
 
 # Logs
 *.log
@@ -41,3 +44,9 @@ coverage/
 # Trae IDE
 .trae/
 *.bfg-report*
+
+# Secrets (safety net)
+*.pem
+*.key
+*.p12
+*.jks

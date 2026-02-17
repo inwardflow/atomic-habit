@@ -151,16 +151,17 @@ const isAssistantRole = (role: unknown): boolean => {
 };
 
 const getLastAssistantContent = (messages: Message[]): string => {
-  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as any).role));
+  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as unknown as AgentMessageShape).role));
   if (!lastAssistant) return '';
   return buildRenderableContent(lastAssistant as unknown as AgentMessageShape).trim();
 };
 
 const getLastAssistantSignature = (messages: Message[]): string => {
-  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as any).role));
+  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as unknown as AgentMessageShape).role));
   if (!lastAssistant) return '';
-  const id = typeof (lastAssistant as any).id === 'string' ? (lastAssistant as any).id : '';
-  const content = buildRenderableContent(lastAssistant as unknown as AgentMessageShape).trim();
+  const shape = lastAssistant as unknown as AgentMessageShape;
+  const id = typeof shape.id === 'string' ? shape.id : '';
+  const content = buildRenderableContent(shape).trim();
   return `${id}::${content}`;
 };
 
@@ -386,11 +387,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         // Forward raw events to activity tracker
         processEvent(event);
 
-        const rawEvent = (event as any)?.rawEvent;
+        const rawEvent = (event as unknown as Record<string, unknown>)?.rawEvent as Record<string, unknown> | undefined;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof (event as unknown as Record<string, unknown>)?.runId === 'string' ? (event as unknown as Record<string, string>).runId : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
@@ -403,10 +404,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         toast.error('AG-UI returned an error from backend.');
       },
       onRunErrorEvent: ({ event }) => {
-        const errorText = typeof (event as any)?.message === 'string' ? (event as any).message.trim() : '';
+        const evtRecord = event as unknown as Record<string, unknown>;
+        const errorText = typeof evtRecord?.message === 'string' ? (evtRecord.message as string).trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof evtRecord?.runId === 'string' ? evtRecord.runId as string : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);

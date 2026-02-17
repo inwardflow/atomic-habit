@@ -26,7 +26,7 @@ const IdentityModal: React.FC<IdentityModalProps> = ({ onClose }) => {
       const response = await api.put('/users/me', { identityStatement: identity });
       setUser({ ...user!, identityStatement: response.data.identityStatement });
       setStep(2);
-    } catch (error) {
+    } catch {
       toast.error('Failed to set identity');
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ const IdentityModal: React.FC<IdentityModalProps> = ({ onClose }) => {
           
           toast.success("You've started your journey.", { icon: '🌱' });
           onClose();
-      } catch (error) {
+      } catch {
           toast.error('Failed to create habit');
       } finally {
           setLoading(false);

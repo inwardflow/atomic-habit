@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
@@ -44,6 +45,7 @@ function App() {
   }, [theme]);
 
   return (
+    <ErrorBoundary>
     <Router>
       <Toaster position="top-right" />
       <Suspense fallback={<PageLoader />}>
@@ -94,6 +96,7 @@ function App() {
         </Routes>
       </Suspense>
     </Router>
+    </ErrorBoundary>
   );
 }
 

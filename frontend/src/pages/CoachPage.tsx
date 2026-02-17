@@ -20,7 +20,7 @@ import { useHabits } from '../hooks/useHabits';
 interface Message {
     id: string;
     role: string;
-    content: string | any;
+    content: string;
     timestamp?: string;
 }
 
@@ -35,6 +35,11 @@ interface ParsedHabitPlan {
     title?: string;
     description?: string;
     habits: HabitPlanItem[];
+}
+
+interface ToolCallData {
+    name: string;
+    arguments: Record<string, unknown>;
 }
 
 interface ParsedWeeklyReview {
@@ -75,8 +80,9 @@ const buildToolCallBlocks = (toolCalls: unknown): string => {
   const blocks = toolCalls
     .map((call) => {
       if (!call || typeof call !== 'object') return '';
-      const functionObject = (call as any).function;
-      const name = typeof functionObject?.name === 'string' ? functionObject.name : '';
+      const functionObject = (call as Record<string, unknown>).function as Record<string, unknown> | undefined;
+      if (!functionObject) return '';
+      const name = typeof functionObject.name === 'string' ? functionObject.name : '';
       if (!name) return '';
 
       const payload = {
@@ -91,7 +97,7 @@ const buildToolCallBlocks = (toolCalls: unknown): string => {
   return blocks.join('\n\n');
 };
 
-const buildRenderableContent = (message: any): string => {
+const buildRenderableContent = (message: Record<string, unknown>): string => {
   const textContent =
     typeof message?.content === 'string'
       ? message.content
@@ -118,14 +124,14 @@ const isAssistantRole = (role: unknown): boolean => {
 const getLastAssistantContent = (messages: Message[]): string => {
   const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole(msg.role));
   if (!lastAssistant) return '';
-  return buildRenderableContent(lastAssistant).trim();
+  return buildRenderableContent(lastAssistant as unknown as Record<string, unknown>).trim();
 };
 
 const getLastAssistantSignature = (messages: Message[]): string => {
   const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole(msg.role));
   if (!lastAssistant) return '';
   const id = typeof lastAssistant.id === 'string' ? lastAssistant.id : '';
-  const content = buildRenderableContent(lastAssistant).trim();
+  const content = buildRenderableContent(lastAssistant as unknown as Record<string, unknown>).trim();
   return `${id}::${content}`;
 };
 
@@ -217,7 +223,7 @@ const CoachPage = () => {
     "按我今天的状态，给我一个最小可执行动作。"
   ];
 
-  const normalizePlanItem = (habit: any, index: number): HabitPlanItem => {
+  const normalizePlanItem = (habit: Record<string, unknown>, index: number): HabitPlanItem => {
     const fallbackName = `Habit ${index + 1}`;
     const name = typeof habit?.name === 'string' && habit.name.trim() ? habit.name.trim() : fallbackName;
     const twoMinuteVersion = typeof habit?.twoMinuteVersion === 'string' && habit.twoMinuteVersion.trim()
@@ -238,19 +244,20 @@ const CoachPage = () => {
     };
   };
 
-  const parseHabitPlan = (candidate: any): ParsedHabitPlan | null => {
+  const parseHabitPlan = (candidate: unknown): ParsedHabitPlan | null => {
     if (!candidate) return null;
+    const obj = candidate as Record<string, unknown>;
 
-    let rawHabits: any[] | null = null;
+    let rawHabits: Record<string, unknown>[] | null = null;
     let title: string | undefined;
     let description: string | undefined;
 
     if (Array.isArray(candidate)) {
-      rawHabits = candidate;
-    } else if (typeof candidate === 'object' && Array.isArray(candidate.habits)) {
-      rawHabits = candidate.habits;
-      if (typeof candidate.goalName === 'string') title = candidate.goalName;
-      if (typeof candidate.description === 'string') description = candidate.description;
+      rawHabits = candidate as Record<string, unknown>[];
+    } else if (typeof candidate === 'object' && Array.isArray(obj.habits)) {
+      rawHabits = obj.habits as Record<string, unknown>[];
+      if (typeof obj.goalName === 'string') title = obj.goalName;
+      if (typeof obj.description === 'string') description = obj.description;
     }
 
     if (!rawHabits || rawHabits.length === 0) return null;
@@ -259,10 +266,11 @@ const CoachPage = () => {
     return habits.length > 0 ? { title, description, habits } : null;
   };
 
-  const parseWeeklyReview = (candidate: any): ParsedWeeklyReview | null => {
+  const parseWeeklyReview = (candidate: unknown): ParsedWeeklyReview | null => {
     if (!candidate || typeof candidate !== 'object') return null;
+    const obj = candidate as Record<string, unknown>;
 
-    const statsSource = candidate.stats && typeof candidate.stats === 'object' ? candidate.stats : candidate;
+    const statsSource = (obj.stats && typeof obj.stats === 'object' ? obj.stats : obj) as Record<string, unknown>;
     const totalCompletedRaw = statsSource.totalCompleted;
     const currentStreakRaw = statsSource.currentStreak;
     const bestStreakRaw = statsSource.bestStreak;
@@ -275,11 +283,11 @@ const CoachPage = () => {
       return null;
     }
 
-    const highlights = Array.isArray(candidate.highlights)
-      ? candidate.highlights.filter((h: unknown) => typeof h === 'string')
+    const highlights = Array.isArray(obj.highlights)
+      ? (obj.highlights as unknown[]).filter((h: unknown) => typeof h === 'string') as string[]
       : [];
-    const suggestion = typeof candidate.suggestion === 'string' && candidate.suggestion.trim()
-      ? candidate.suggestion.trim()
+    const suggestion = typeof obj.suggestion === 'string' && obj.suggestion.trim()
+      ? obj.suggestion.trim()
       : 'Keep going with small, consistent steps this week.';
 
     const parsed: ParsedWeeklyReview = {
@@ -303,7 +311,7 @@ const CoachPage = () => {
     setIsApplyingPlan(true);
     try {
       await addHabits(plan.habits);
-    } catch (error) {
+    } catch {
       toast.error('Failed to add plan');
     } finally {
       setIsApplyingPlan(false);
@@ -318,7 +326,7 @@ const CoachPage = () => {
     try {
       await addHabits([plan.habits[0]]);
       toast.success('Added the first tiny habit. Keep it easy.');
-    } catch (error) {
+    } catch {
       toast.error('Failed to add starter habit');
     } finally {
       setIsApplyingPlan(false);
@@ -330,7 +338,7 @@ const CoachPage = () => {
 
     let text = content;
     let suggestions: string[] = [];
-    let toolCall: any = null;
+    let toolCall: ToolCallData | null = null;
     let plan: ParsedHabitPlan | null = null;
     let weeklyReview: ParsedWeeklyReview | null = null;
 
@@ -351,7 +359,7 @@ const CoachPage = () => {
             const parsed = JSON5.parse(jsonStr);
             
             if (parsed.name && parsed.arguments && !toolCall) {
-                toolCall = parsed;
+                toolCall = parsed as ToolCallData;
                 text = text.replace(block.fullMatch, '').trim();
                 continue; 
             }
@@ -380,7 +388,7 @@ const CoachPage = () => {
                 text = text.replace(block.fullMatch, '').trim();
             }
 
-        } catch (e) {
+        } catch {
             // Not a valid JSON block, ignore
         }
     }
@@ -424,18 +432,17 @@ const CoachPage = () => {
     // Initialize Agent
     const newAgent = new HttpAgent({
       url: `${BACKEND_URL}/agui/run`,
-      // @ts-ignore
       threadId: 'user-' + (user ? user.id : Date.now()),
       ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
     });
 
     const { unsubscribe } = newAgent.subscribe({
       onMessagesChanged: ({ messages: msgs }) => {
-        const formattedMessages: Message[] = msgs.map((m: any) => ({
+        const formattedMessages: Message[] = msgs.map((m: Record<string, unknown>) => ({
             id: typeof m.id === 'string' ? m.id : `msg-${Date.now()}-${Math.random()}`,
             role: typeof m.role === 'string' ? m.role.toLowerCase() : 'assistant',
             content: buildRenderableContent(m),
-            timestamp: m.timestamp
+            timestamp: m.timestamp as string | undefined
         }));
         setMessages(formattedMessages);
 
@@ -454,16 +461,16 @@ const CoachPage = () => {
         // Forward raw events to activity tracker
         processEvent(event);
 
-        const rawEvent = (event as any)?.rawEvent;
+        const evtRaw = event as unknown as Record<string, unknown>;
+        const rawEvent = evtRaw?.rawEvent as Record<string, unknown> | undefined;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof evtRaw?.runId === 'string' ? evtRaw.runId as string : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
 
-        // @ts-ignore
         newAgent.addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -472,15 +479,15 @@ const CoachPage = () => {
         toast.error('AG-UI returned an error from backend.');
       },
       onRunErrorEvent: ({ event }) => {
-        const errorText = typeof (event as any)?.message === 'string' ? (event as any).message.trim() : '';
+        const errEvt = event as unknown as Record<string, unknown>;
+        const errorText = typeof errEvt?.message === 'string' ? (errEvt.message as string).trim() : '';
         if (!errorText) return;
 
-        const runId = typeof (event as any)?.runId === 'string' ? (event as any).runId : 'unknown-run';
+        const runId = typeof errEvt?.runId === 'string' ? errEvt.runId as string : 'unknown-run';
         const signature = `${runId}::${errorText}`;
         if (handledRunErrorSignaturesRef.current.has(signature)) return;
         handledRunErrorSignaturesRef.current.add(signature);
 
-        // @ts-ignore
         newAgent.addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -571,11 +578,10 @@ const CoachPage = () => {
 
     const userMsg = {
       id: `msg-${Date.now()}`,
-      role: 'user',
+      role: 'user' as const,
       content: textToSend,
     };
 
-    // @ts-ignore
     agent.addMessage(userMsg);
     if (!textOverride) setInput('');
     setIsLoading(true);
@@ -591,14 +597,11 @@ const CoachPage = () => {
         const lastAssistantContent = getLastAssistantContent(agent.messages as Message[]);
 
         if (recovered && recovered !== lastAssistantContent) {
-          const recoveredMessage: Message = {
+          agent.addMessage({
             id: `result-${Date.now()}`,
-            role: 'assistant',
+            role: 'assistant' as const,
             content: recovered,
-            timestamp: new Date().toISOString(),
-          };
-          // @ts-ignore
-          agent.addMessage(recoveredMessage);
+          });
         }
       }
     } catch (error) {
@@ -625,7 +628,6 @@ const CoachPage = () => {
 
     setMessages((prev) => [...prev, promptMessage]);
     if (agent) {
-      // @ts-ignore
       agent.addMessage({ id: promptMessage.id, role: 'user', content: promptMessage.content });
     }
 
@@ -642,7 +644,6 @@ const CoachPage = () => {
 
       setMessages((prev) => [...prev, aiMessage]);
       if (agent) {
-        // @ts-ignore
         agent.addMessage({ id: aiMessage.id, role: 'assistant', content: aiMessage.content });
       }
       await loadWeeklyReviewHistory();
@@ -815,8 +816,8 @@ const CoachPage = () => {
                             <h3 className="font-semibold text-gray-800 mb-2">Coach Proposal</h3>
                             {toolCall.name === 'create_first_habit' && (
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><span className="font-medium text-gray-700">Habit:</span> {toolCall.arguments.habitName}</p>
-                                    <p><span className="font-medium text-gray-700">2-Min Version:</span> {toolCall.arguments.twoMinuteVersion}</p>
+                                    <p><span className="font-medium text-gray-700">Habit:</span> {String(toolCall.arguments.habitName ?? '')}</p>
+                                    <p><span className="font-medium text-gray-700">2-Min Version:</span> {String(toolCall.arguments.twoMinuteVersion ?? '')}</p>
                                     <div className="pt-2 flex gap-2">
                                         <button 
                                             onClick={() => handleSend("Yes, let's set it up!")}
@@ -836,18 +837,18 @@ const CoachPage = () => {
                             {toolCall.name === 'present_weekly_review' && (
                                 <WeeklyReviewCard 
                                     stats={{
-                                        totalCompleted: toolCall.arguments.totalCompleted || 0,
-                                        currentStreak: toolCall.arguments.currentStreak || 0
+                                        totalCompleted: Number(toolCall.arguments.totalCompleted) || 0,
+                                        currentStreak: Number(toolCall.arguments.currentStreak) || 0
                                     }}
-                                    highlights={toolCall.arguments.highlights || []}
-                                    suggestion={toolCall.arguments.suggestion || "Keep going!"}
+                                    highlights={(toolCall.arguments.highlights as string[]) || []}
+                                    suggestion={String(toolCall.arguments.suggestion ?? 'Keep going!')}
                                 />
                             )}
                             {toolCall.name === 'present_daily_focus' && (
                                 <div className="max-w-md w-full">
                                     <DailyFocusCard
-                                        habitName={toolCall.arguments.habitName}
-                                        twoMinuteVersion={toolCall.arguments.twoMinuteVersion || toolCall.arguments.habitName}
+                                        habitName={String(toolCall.arguments.habitName ?? '')}
+                                        twoMinuteVersion={String(toolCall.arguments.twoMinuteVersion || toolCall.arguments.habitName || '')}
                                         onComplete={(habitName) => {
                                             handleSend(`I completed ${habitName}!`);
                                         }}
@@ -856,7 +857,7 @@ const CoachPage = () => {
                             )}
                             {toolCall.name === 'save_user_identity' && (
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><span className="font-medium text-gray-700">Identity:</span> {toolCall.arguments.identity}</p>
+                                    <p><span className="font-medium text-gray-700">Identity:</span> {String(toolCall.arguments.identity ?? '')}</p>
                                     <div className="pt-2 flex gap-2">
                                         <button 
                                             onClick={() => handleSend("Yes, that's who I want to be!")}
@@ -869,7 +870,7 @@ const CoachPage = () => {
                             )}
                              {!handledToolNames.includes(toolCall.name) && (
                                 <div className="text-xs text-gray-500">
-                                    <p className="font-medium text-gray-700">Tool: {toolCall.name}</p>
+                                    <p className="font-medium text-gray-700">Tool: {String(toolCall.name)}</p>
                                     <pre className="mt-1 bg-gray-50 p-2 rounded overflow-x-auto border border-gray-200">
                                         {JSON.stringify(toolCall.arguments, null, 2)}
                                     </pre>

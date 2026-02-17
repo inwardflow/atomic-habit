@@ -1,5 +1,6 @@
 package com.atomichabits.backend.service;
 
+import lombok.extern.slf4j.Slf4j;
 import com.atomichabits.backend.model.*;
 import com.atomichabits.backend.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class MemoryService {
     private static final Pattern JSON_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```", Pattern.CASE_INSENSITIVE);
@@ -96,7 +98,7 @@ public class MemoryService {
             try {
                 generateSummaryForDate(user, yesterday);
             } catch (Exception e) {
-                System.err.println("Failed to generate summary for user " + user.getEmail() + ": " + e.getMessage());
+                log.warn("Failed to generate summary for user {}: {}", user.getEmail(), e.getMessage());
             }
         }
     }
@@ -226,7 +228,7 @@ public class MemoryService {
 
             return response != null ? response.getTextContent() : null;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("AI call failed for agent {}: {}", agentName, e.getMessage());
             return null;
         }
     }

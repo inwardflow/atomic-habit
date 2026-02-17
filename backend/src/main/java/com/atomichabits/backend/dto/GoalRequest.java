@@ -1,5 +1,6 @@
 package com.atomichabits.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GoalRequest {
+    @NotBlank(message = "Goal name is required")
     private String name;
     private String description;
     private LocalDate startDate;

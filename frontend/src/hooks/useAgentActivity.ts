@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { AgentActivity, AgentPhase, ToolCallActivity } from '../components/AgentActivityIndicator';
+import type { AgentActivity, AgentPhase } from '../components/AgentActivityIndicator';
 
 const INITIAL_ACTIVITY: AgentActivity = {
   phase: 'idle',
@@ -81,11 +81,13 @@ export function useAgentActivity() {
    * Call this from the agent's onRawEvent subscriber.
    */
   const processEvent = useCallback(
-    (event: any) => {
+    (event: Record<string, unknown>) => {
       if (!event) return;
 
-      const type = event.type || event.eventType;
+      const type = (event.type || event.eventType) as string | undefined;
       if (!type) return;
+
+      const toolCall = event.toolCall as Record<string, unknown> | undefined;
 
       switch (type) {
         case 'RUN_STARTED':
@@ -94,16 +96,18 @@ export function useAgentActivity() {
           break;
 
         case 'TOOL_CALL_START': {
-          const toolName =
+          const toolName = (
             event.toolCallName ||
             event.name ||
-            (event.toolCall && event.toolCall.name) ||
-            'unknown_tool';
-          const toolArgs =
+            (toolCall && toolCall.name) ||
+            'unknown_tool'
+          ) as string;
+          const toolArgs = (
             event.toolCallArgs ||
             event.args ||
-            (event.toolCall && event.toolCall.arguments) ||
-            undefined;
+            (toolCall && toolCall.arguments) ||
+            undefined
+          ) as Record<string, unknown> | undefined;
 
           // Check if it's a memory-related tool
           const isMemoryTool =
@@ -120,11 +124,12 @@ export function useAgentActivity() {
 
         case 'TOOL_CALL_END':
         case 'TOOL_CALL_RESULT': {
-          const endToolName =
+          const endToolName = (
             event.toolCallName ||
             event.name ||
-            (event.toolCall && event.toolCall.name) ||
-            '';
+            (toolCall && toolCall.name) ||
+            ''
+          ) as string;
           if (endToolName) {
             completeToolCall(endToolName);
           }

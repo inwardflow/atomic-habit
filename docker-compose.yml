@@ -5,17 +5,29 @@ services:
     ports:
       - "8080:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/atomic_habits}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
       SPRING_JPA_DATABASE_PLATFORM: ${SPRING_JPA_DATABASE_PLATFORM:-org.hibernate.dialect.PostgreSQLDialect}
-      SPRING_JWT_SECRET: ${SPRING_JWT_SECRET:-replace_with_32_char_hex}
-      AGENTSCOPE_MODEL_API_KEY: ${AGENTSCOPE_API_KEY:-}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      SPRING_JPA_SHOW_SQL: "false"
+      SPRING_H2_CONSOLE_ENABLED: "false"
+      SPRING_JWT_SECRET: ${SPRING_JWT_SECRET:?JWT secret must be set}
+      AGENTSCOPE_MODEL_API_KEY: ${AGENTSCOPE_API_KEY:?AI API key must be set}
       AGENTSCOPE_MODEL_MODEL_NAME: ${AGENTSCOPE_MODEL_NAME:-Qwen/Qwen2.5-72B-Instruct}
       AGENTSCOPE_MODEL_BASE_URL: ${AGENTSCOPE_MODEL_BASE_URL:-https://api.siliconflow.com/v1}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   frontend:
@@ -24,7 +36,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
   db:

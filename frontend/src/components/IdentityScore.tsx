@@ -43,6 +43,7 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
     if (stats.badges) {
         setPrevBadgeCount(stats.badges.length);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stats?.identityScore, stats?.badges]);
 
   if (!stats) return null;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Wind, X, Eye, Ear, Hand, Coffee, Footprints, ArrowRight, Check, CloudRain, Volume2, VolumeX } from 'lucide-react';
+import { Wind, X, Eye, Ear, Hand, Coffee, Footprints, ArrowRight, Check, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api/axios';
 import { useHabits } from '../hooks/useHabits';
+import type { Habit } from '../types';
 import confetti from 'canvas-confetti';
 import toast from 'react-hot-toast';
 import { soundEngine } from '../utils/soundEngine';
@@ -13,7 +14,7 @@ const PanicMode = () => {
   const [mode, setMode] = useState<'breathe' | 'grounding' | 'focus'>('breathe');
   const [groundingStep, setGroundingStep] = useState(0);
   const { habits, completeHabit } = useHabits();
-  const [focusHabit, setFocusHabit] = useState<any>(null);
+  const [focusHabit, setFocusHabit] = useState<Habit | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   const groundingSteps = [
@@ -47,6 +48,7 @@ const PanicMode = () => {
             setSoundEnabled(false);
         }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, habits]);
 
   const toggleSound = () => {

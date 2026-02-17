@@ -31,7 +31,7 @@ const GratitudeJar = () => {
             await api.delete(`/moods/${id}`);
             setLogs(logs.filter(log => log.id !== id));
             toast.success('Memory deleted.');
-        } catch (e) {
+        } catch {
             toast.error('Could not delete.');
         }
     };
@@ -53,7 +53,7 @@ const GratitudeJar = () => {
             setLogs(logs.map(log => log.id === id ? { ...log, note: editContent } : log));
             setEditingId(null);
             toast.success('Memory updated.');
-        } catch (e) {
+        } catch {
             toast.error('Could not update.');
         }
     };
