@@ -2,10 +2,12 @@ package com.atomichabits.backend.controller;
 
 import com.atomichabits.backend.dto.AdvancedUserStatsResponse;
 import com.atomichabits.backend.dto.BadgeResponse;
+import com.atomichabits.backend.dto.ChangePasswordRequest;
 import com.atomichabits.backend.dto.UserProfileResponse;
 import com.atomichabits.backend.dto.UserStatsResponse;
 import com.atomichabits.backend.service.GamificationService;
 import com.atomichabits.backend.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +36,25 @@ public class UserController {
     @PutMapping("/me")
     public ResponseEntity<UserProfileResponse> updateCurrentUser(@RequestBody Map<String, String> request, Authentication authentication) {
         String identityStatement = request.get("identityStatement");
-        return ResponseEntity.ok(userService.updateIdentity(authentication.getName(), identityStatement));
+        String email = request.get("email");
+        return ResponseEntity.ok(userService.updateProfile(authentication.getName(), identityStatement, email));
+    }
+
+    @PostMapping("/me/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+        userService.changePassword(authentication.getName(), request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+    }
+
+    @PostMapping("/me/delete-account")
+    public ResponseEntity<Map<String, String>> deleteAccount(
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+        String password = request.get("password");
+        userService.deleteAccount(authentication.getName(), password);
+        return ResponseEntity.ok(Map.of("message", "Account deleted successfully"));
     }
 
     @GetMapping("/stats")

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import CoachPage from './pages/CoachPage';
 import GratitudeJar from './pages/GratitudeJar';
+import Settings from './pages/Settings';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { useNotifications } from './hooks/useNotifications';
@@ -66,6 +67,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CoachPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />
