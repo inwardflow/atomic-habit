@@ -1,3 +1,8 @@
+server:
+  servlet:
+    async:
+      timeout: ${SERVER_ASYNC_TIMEOUT:300000}
+
 spring:
   application:
     name: atomic-habits-backend
@@ -39,6 +44,8 @@ agentscope:
     path-prefix: /agui
     cors-enabled: true
     server-side-memory: true
+    sse-timeout: ${AGENTSCOPE_SSE_TIMEOUT:300000}
+    run-timeout: ${AGENTSCOPE_RUN_TIMEOUT:5m}
   model:
     api-key: ${AGENTSCOPE_MODEL_API_KEY:${AGENTSCOPE_API_KEY:***REMOVED***}}
     model-name: ${AGENTSCOPE_MODEL_MODEL_NAME:${AGENTSCOPE_MODEL_NAME:Qwen/Qwen2.5-72B-Instruct}}

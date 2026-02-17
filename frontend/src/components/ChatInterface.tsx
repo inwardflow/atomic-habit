@@ -6,6 +6,8 @@ import { Calendar, Layers, Send, X, Zap } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
 import api, { BACKEND_URL } from '../api/axios';
+import { runAgentWithRetry, classifyAgentError, getErrorToastMessage } from '../utils/agentRetry';
+import type { ClassifiedError } from '../utils/agentRetry';
 import { useGoals } from '../hooks/useGoals';
 import { useHabits } from '../hooks/useHabits';
 import { useAuthStore } from '../store/authStore';
@@ -431,7 +433,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
 
       try {
         const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
-        const runResult = await agent.runAgent({ runId: `run-${Date.now()}` });
+        const runResult = await runAgentWithRetry(agent, { runId: `run-${Date.now()}` });
         const afterSignature = getLastAssistantSignature(agent.messages as Message[]);
 
         if (beforeSignature === afterSignature) {
@@ -448,8 +450,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           }
         }
       } catch (error) {
-        console.error('Agent run failed:', error);
-        toast.error('Connection failed');
+        const classified = error && typeof error === 'object' && 'kind' in error
+          ? (error as ClassifiedError)
+          : classifyAgentError(error);
+        console.error('Agent run failed:', classified.kind, classified.message);
+        toast.error(getErrorToastMessage(classified));
       } finally {
         setLoading(false);
       }

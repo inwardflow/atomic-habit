@@ -197,10 +197,19 @@ public class MemoryService {
 
     private String callAIWithSystemPrompt(String prompt, String systemPrompt, String agentName) {
         try {
+            var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
+                    .connectTimeout(java.time.Duration.ofSeconds(30))
+                    .readTimeout(java.time.Duration.ofMinutes(3))
+                    .writeTimeout(java.time.Duration.ofSeconds(30))
+                    .build();
+            var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
+                    .config(transportConfig)
+                    .build();
             OpenAIChatModel model = OpenAIChatModel.builder()
                     .apiKey(apiKey)
                     .modelName(modelName)
                     .baseUrl(baseUrl)
+                    .httpTransport(httpTransport)
                     .build();
 
             ReActAgent summarizer = ReActAgent.builder()

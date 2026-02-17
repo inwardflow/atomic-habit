@@ -7,6 +7,8 @@ import JSON5 from 'json5';
 import toast from 'react-hot-toast';
 import { generateWeeklyReview, getCoachMemoryHits, getGreeting, getChatHistory, getWeeklyReviews } from '../api/coach';
 import { BACKEND_URL } from '../api/axios';
+import { runAgentWithRetry, classifyAgentError, getErrorToastMessage } from '../utils/agentRetry';
+import type { ClassifiedError } from '../utils/agentRetry';
 import type { CoachMemoryHitsResponse, WeeklyReviewRecord } from '../api/coach';
 import WeeklyReviewCard from '../components/WeeklyReviewCard';
 import DailyFocusCard from '../components/DailyFocusCard';
@@ -567,7 +569,7 @@ const CoachPage = () => {
     
     try {
       const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
-      const runResult = await agent.runAgent({ runId: `run-${Date.now()}` });
+      const runResult = await runAgentWithRetry(agent, { runId: `run-${Date.now()}` });
       const afterSignature = getLastAssistantSignature(agent.messages as Message[]);
 
       if (beforeSignature === afterSignature) {
@@ -585,9 +587,12 @@ const CoachPage = () => {
           agent.addMessage(recoveredMessage);
         }
       }
-    } catch (e) {
-      console.error('Agent run failed:', e);
-      toast.error('Failed to send message. Check AG-UI backend connectivity.');
+    } catch (error) {
+      const classified = error && typeof error === 'object' && 'kind' in error
+        ? (error as ClassifiedError)
+        : classifyAgentError(error);
+      console.error('Agent run failed:', classified.kind, classified.message);
+      toast.error(getErrorToastMessage(classified));
     } finally {
       setIsLoading(false);
     }

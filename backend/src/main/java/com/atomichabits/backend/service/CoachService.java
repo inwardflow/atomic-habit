@@ -506,10 +506,20 @@ public class CoachService {
                 .apply();
 
         // Initialize Model
+        // Configure HTTP transport with explicit timeouts to prevent hanging connections
+        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
+                .connectTimeout(java.time.Duration.ofSeconds(30))
+                .readTimeout(java.time.Duration.ofMinutes(3))
+                .writeTimeout(java.time.Duration.ofSeconds(30))
+                .build();
+        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
+                .config(transportConfig)
+                .build();
         var modelBuilder = OpenAIChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(modelName)
-                .baseUrl(baseUrl);
+                .baseUrl(baseUrl)
+                .httpTransport(httpTransport);
 
         // Allow backend engineers to explicitly enable/disable proxy via YAML.
         if (proxyEnabled) {

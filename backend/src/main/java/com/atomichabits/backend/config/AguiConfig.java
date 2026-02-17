@@ -45,11 +45,22 @@ public class AguiConfig {
                 .tool(coachTools)
                 .apply();
 
+        // Configure HTTP transport with explicit timeouts
+        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
+                .connectTimeout(java.time.Duration.ofSeconds(30))
+                .readTimeout(java.time.Duration.ofMinutes(3))
+                .writeTimeout(java.time.Duration.ofSeconds(30))
+                .build();
+        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
+                .config(transportConfig)
+                .build();
+
         // Initialize Model
         OpenAIChatModel model = OpenAIChatModel.builder()
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .baseUrl(baseUrl)
+                .httpTransport(httpTransport)
                 // Some provider/model combinations emit malformed streaming tool events,
                 // which breaks @ag-ui/client verification and surfaces as "Connection failed".
                 // Disable model-level streaming so AG-UI can emit a stable event sequence.

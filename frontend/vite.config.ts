@@ -61,8 +61,8 @@ export default defineConfig({
           'vendor-ui': ['lucide-react', 'react-hot-toast', 'canvas-confetti', 'clsx', 'tailwind-merge'],
           // Data & state
           'vendor-data': ['axios', 'zustand', 'date-fns'],
-          // Markdown & AG-UI
-          'vendor-content': ['react-markdown', '@ag-ui/client'],
+          // Markdown, AG-UI & JSON parsing
+          'vendor-content': ['react-markdown', '@ag-ui/client', 'json5'],
         },
       },
     },
