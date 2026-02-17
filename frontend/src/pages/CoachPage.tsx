@@ -9,9 +9,12 @@ import { generateWeeklyReview, getCoachMemoryHits, getGreeting, getChatHistory, 
 import { BACKEND_URL } from '../api/axios';
 import { runAgentWithRetry, classifyAgentError, getErrorToastMessage } from '../utils/agentRetry';
 import type { ClassifiedError } from '../utils/agentRetry';
+import { useAgentActivity } from '../hooks/useAgentActivity';
+import AgentActivityIndicator from '../components/AgentActivityIndicator';
 import type { CoachMemoryHitsResponse, WeeklyReviewRecord } from '../api/coach';
 import WeeklyReviewCard from '../components/WeeklyReviewCard';
 import DailyFocusCard from '../components/DailyFocusCard';
+import CoachMemorySidebar from '../components/CoachMemorySidebar';
 import { useHabits } from '../hooks/useHabits';
 
 interface Message {
@@ -43,8 +46,6 @@ interface ParsedWeeklyReview {
     highlights: string[];
     suggestion: string;
 }
-
-import CoachMemorySidebar from '../components/CoachMemorySidebar';
 
 const parseToolArguments = (rawArgs: unknown): Record<string, unknown> => {
   if (typeof rawArgs === 'string') {
@@ -206,6 +207,10 @@ const CoachPage = () => {
   const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const { addHabits } = useHabits();
+
+  // Agent activity tracking
+  const { activity, processEvent, markRunStart, markRunError, reset: resetActivity } = useAgentActivity();
+
   const coldStartPrompts = [
     "我现在有点茫然，请你带我3步开始，越简单越好。",
     "先问我3个问题，帮我找到第一个2分钟习惯。",
@@ -320,8 +325,6 @@ const CoachPage = () => {
     }
   };
 
-  // ... (keep parseMessageContent as is)
-
   const parseMessageContent = (content: string) => {
     if (typeof content !== 'string') return { text: JSON.stringify(content), suggestions: [], toolCall: null, plan: null, weeklyReview: null };
 
@@ -331,8 +334,6 @@ const CoachPage = () => {
     let plan: ParsedHabitPlan | null = null;
     let weeklyReview: ParsedWeeklyReview | null = null;
 
-    // 1. Extract all markdown code blocks to check for JSON content
-    // This is more robust than regex matching specific JSON fields because it handles nested objects correctly
     const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
     let match;
     const codeBlocks = [];
@@ -340,10 +341,8 @@ const CoachPage = () => {
         codeBlocks.push({ fullMatch: match[0], inner: match[1].trim() });
     }
 
-    // Process code blocks to find tool calls or suggestions
     for (const block of codeBlocks) {
         let jsonStr = block.inner;
-        // Fix potential double braces if present (e.g. {{...}})
         while (jsonStr.startsWith('{{') && jsonStr.endsWith('}}')) {
              jsonStr = jsonStr.substring(1, jsonStr.length - 1);
         }
@@ -351,28 +350,20 @@ const CoachPage = () => {
         try {
             const parsed = JSON5.parse(jsonStr);
             
-            // Check for Tool Call
             if (parsed.name && parsed.arguments && !toolCall) {
                 toolCall = parsed;
                 text = text.replace(block.fullMatch, '').trim();
                 continue; 
             }
 
-            // Check for Suggestions (replies)
             if (parsed.replies && Array.isArray(parsed.replies)) {
                 suggestions = parsed.replies;
-                // Only remove if it's purely a control JSON or we want to hide it
-                // If it was a tool call that also had replies, we might have processed it above? 
-                // No, usually they are separate or same object.
-                // If same object, we might want to hide it too.
                 if (!toolCall || toolCall !== parsed) {
                      text = text.replace(block.fullMatch, '').trim();
                 }
             }
             
-            // Check for Array of suggestions (direct array)
             if (Array.isArray(parsed) && parsed.every(i => typeof i === 'string') && suggestions.length === 0) {
-                 // This matches the old `replies` format if it was just an array in a block
                  suggestions = parsed;
                  text = text.replace(block.fullMatch, '').trim();
             }
@@ -394,8 +385,7 @@ const CoachPage = () => {
         }
     }
 
-    // Fallback: match bare `replies ["..."]` lines that the AI sometimes emits
-    // without wrapping in a fenced code block.
+    // Fallback: match bare `replies ["..."]` lines
     if (suggestions.length === 0) {
       text = text.replace(
         /^\s*replies\s+(\[.*\])\s*$/gim,
@@ -461,6 +451,9 @@ const CoachPage = () => {
         }
       },
       onRawEvent: ({ event }) => {
+        // Forward raw events to activity tracker
+        processEvent(event);
+
         const rawEvent = (event as any)?.rawEvent;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
         if (!errorText) return;
@@ -501,8 +494,9 @@ const CoachPage = () => {
 
     return () => {
       unsubscribe();
+      resetActivity();
     };
-  }, [user, token, loadMemoryHitsForMessage]);
+  }, [user, token, loadMemoryHitsForMessage, processEvent, resetActivity]);
 
   // Load chat history or greeting
   useEffect(() => {
@@ -555,7 +549,7 @@ const CoachPage = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, activity]);
 
   const loadWeeklyReviewHistory = async () => {
     try {
@@ -585,6 +579,7 @@ const CoachPage = () => {
     agent.addMessage(userMsg);
     if (!textOverride) setInput('');
     setIsLoading(true);
+    markRunStart();
     
     try {
       const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
@@ -612,6 +607,7 @@ const CoachPage = () => {
         : classifyAgentError(error);
       console.error('Agent run failed:', classified.kind, classified.message);
       toast.error(getErrorToastMessage(classified));
+      markRunError();
     } finally {
       setIsLoading(false);
     }
@@ -634,6 +630,7 @@ const CoachPage = () => {
     }
 
     setIsLoading(true);
+    markRunStart();
     try {
       const result = await generateWeeklyReview();
       const aiMessage: Message = {
@@ -653,6 +650,7 @@ const CoachPage = () => {
     } catch (error) {
       toast.error('Failed to generate weekly review');
       console.error('Failed to generate weekly review', error);
+      markRunError();
     } finally {
       setIsLoading(false);
     }
@@ -759,7 +757,7 @@ const CoachPage = () => {
                 </div>
             )}
             {/* Messages */}
-            {messages.length === 0 && (
+            {messages.length === 0 && !isLoading && (
                 <div className="text-center text-gray-500 mt-10">
                     <Bot size={48} className="mx-auto mb-2 opacity-50" />
                     <p>Start chatting with your Atomic Habits Coach!</p>
@@ -930,7 +928,8 @@ const CoachPage = () => {
                                 <button
                                     key={idx}
                                     onClick={() => handleSend(suggestion)}
-                                    className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full hover:bg-blue-200 transition-colors border border-blue-200"
+                                    disabled={isLoading}
+                                    className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full hover:bg-blue-200 transition-colors border border-blue-200 disabled:opacity-50"
                                 >
                                     {suggestion}
                                 </button>
@@ -940,6 +939,16 @@ const CoachPage = () => {
                 </div>
               );
             })}
+
+            {/* Agent Activity Indicator - replaces simple loading spinner */}
+            {isLoading && (
+              <div className="flex flex-col items-start">
+                <div className="max-w-[80%]">
+                  <AgentActivityIndicator activity={activity} />
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
         </div>
         <div className="flex gap-2">

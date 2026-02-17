@@ -67,25 +67,55 @@ export function classifyAgentError(error: unknown): ClassifiedError {
 }
 
 /**
- * Run an agent with automatic retry and exponential backoff.
+ * Wrap a promise with a timeout. If the promise doesn't resolve within
+ * the given time, it rejects with a timeout error.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout: ${label} did not complete within ${Math.round(ms / 1000)}s`));
+    }, ms);
+
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
+/**
+ * Run an agent with automatic retry, exponential backoff, and timeout protection.
  *
  * @param agent - The HttpAgent instance
  * @param options - runAgent options (runId, etc.)
  * @param maxRetries - Maximum number of retry attempts (default 2, so up to 3 total attempts)
- * @param baseDelay - Base delay in ms for exponential backoff (default 1000)
+ * @param baseDelay - Base delay in ms for exponential backoff (default 1500)
+ * @param timeoutMs - Timeout per attempt in ms (default 90000 = 90s)
  * @returns The run result, or throws the last ClassifiedError
  */
 export async function runAgentWithRetry(
   agent: HttpAgent,
   options: { runId: string },
   maxRetries: number = 2,
-  baseDelay: number = 1000,
+  baseDelay: number = 1500,
+  timeoutMs: number = 90_000,
 ): Promise<{ result: unknown }> {
   let lastError: ClassifiedError | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const result = await agent.runAgent(options);
+      // Wrap runAgent with timeout protection
+      const result = await withTimeout(
+        agent.runAgent(options),
+        timeoutMs,
+        `Agent run (attempt ${attempt + 1})`,
+      );
       return result;
     } catch (error) {
       lastError = classifyAgentError(error);
@@ -100,7 +130,7 @@ export async function runAgentWithRetry(
         break;
       }
 
-      // Exponential backoff: 1s, 2s, 4s...
+      // Exponential backoff: 1.5s, 3s, 6s...
       const delay = baseDelay * Math.pow(2, attempt);
       await new Promise((resolve) => setTimeout(resolve, delay));
 

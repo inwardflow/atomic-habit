@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import api, { BACKEND_URL } from '../api/axios';
 import { runAgentWithRetry, classifyAgentError, getErrorToastMessage } from '../utils/agentRetry';
 import type { ClassifiedError } from '../utils/agentRetry';
+import { useAgentActivity } from '../hooks/useAgentActivity';
+import AgentActivityIndicator from './AgentActivityIndicator';
 import { useGoals } from '../hooks/useGoals';
 import { useHabits } from '../hooks/useHabits';
 import { useAuthStore } from '../store/authStore';
@@ -59,14 +61,6 @@ interface GoalPlan {
 }
 
 type PlanPayload = GoalPlan | PlanHabit[];
-
-const TypingIndicator = () => (
-  <div className="flex space-x-1 rounded-lg bg-gray-100 p-2 w-fit">
-    <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]"></div>
-    <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]"></div>
-    <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400"></div>
-  </div>
-);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -328,6 +322,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   const processedActionsRef = useRef<Set<string>>(new Set());
   const handledRunErrorSignaturesRef = useRef<Set<string>>(new Set());
 
+  // Agent activity tracking
+  const { activity, processEvent, markRunStart, markRunError, reset: resetActivity } = useAgentActivity();
+
   useEffect(() => {
     let active = true;
 
@@ -386,6 +383,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         setLoading(false);
       },
       onRawEvent: ({ event }) => {
+        // Forward raw events to activity tracker
+        processEvent(event);
+
         const rawEvent = (event as any)?.rawEvent;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
         if (!errorText) return;
@@ -423,12 +423,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
     return () => {
       unsubscribe();
       agentRef.current = null;
+      resetActivity();
     };
-  }, [handleRefreshAction, token, user]);
+  }, [handleRefreshAction, processEvent, resetActivity, token, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, activity]);
 
   const sendMessage = useCallback(
     async (text: string = input) => {
@@ -446,6 +447,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       agent.addMessage(message);
       setInput('');
       setLoading(true);
+      markRunStart();
 
       try {
         const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
@@ -471,11 +473,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           : classifyAgentError(error);
         console.error('Agent run failed:', classified.kind, classified.message);
         toast.error(getErrorToastMessage(classified));
+        markRunError();
       } finally {
         setLoading(false);
       }
     },
-    [input, loading]
+    [input, loading, markRunStart, markRunError]
   );
 
   const handleWeeklyReview = useCallback(() => {
@@ -533,7 +536,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
             <button
               key={reply}
               onClick={() => void sendMessage(reply)}
-              className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50"
+              disabled={loading}
+              className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:opacity-50"
             >
               {reply}
             </button>
@@ -541,7 +545,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         </div>
       );
     },
-    [sendMessage]
+    [sendMessage, loading]
   );
 
   const renderMessageContent = useCallback(
@@ -697,8 +701,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
 
         {messages.length === 0 && loading && (
           <div className="mt-10 flex flex-col items-center justify-center space-y-2">
-            <TypingIndicator />
-            <p className="text-sm text-gray-400">Checking your habits...</p>
+            <AgentActivityIndicator activity={activity} compact />
           </div>
         )}
 
@@ -714,9 +717,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           </div>
         ))}
 
+        {/* Agent activity indicator replaces the old typing dots */}
         {loading && messages.length > 0 && (
           <div className="flex justify-start">
-            <TypingIndicator />
+            <div className="max-w-[85%]">
+              <AgentActivityIndicator activity={activity} compact />
+            </div>
           </div>
         )}
 
@@ -725,7 +731,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
 
       <div className="flex gap-2 border-t p-4">
         <input
-          className="flex-1 rounded border p-2 outline-none focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 rounded border p-2 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
@@ -733,7 +739,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
               void sendMessage();
             }
           }}
-          placeholder={shouldShowStarterGuide ? 'For example: where should I start?' : 'Ask a question...'}
+          disabled={loading}
+          placeholder={loading ? 'Coach is thinking...' : (shouldShowStarterGuide ? 'For example: where should I start?' : 'Ask a question...')}
         />
         <button
           onClick={() => void sendMessage()}
