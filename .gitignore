@@ -38,3 +38,5 @@ coverage/
 
 # Docker
 **/.dockerignore.local
+# Trae IDE
+.trae/
