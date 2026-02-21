@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 import { useTranslation } from 'react-i18next';
 
+type MoodTypeKey = "motivated" | "focused" | "happy" | "neutral" | "tired" | "sad" | "anxious" | "frustrated";
+
 const MOODS = [
     { id: 'MOTIVATED', icon: Zap, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' },
     { id: 'FOCUSED', icon: Target, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
@@ -95,7 +97,9 @@ const MoodTracker = () => {
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${mood.bg} ${mood.color}`}>
                                 <Icon size={18} />
                             </div>
-                            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">{t(`mood.types.${typeKey}` as any)}</span>
+                            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                                {t(`mood.types.${typeKey as MoodTypeKey}`)}
+                            </span>
                         </button>
                     );
                 })}
