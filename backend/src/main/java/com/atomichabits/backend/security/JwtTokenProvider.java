@@ -40,6 +40,10 @@ public class JwtTokenProvider {
 
     public String generateToken(Authentication authentication) {
         String username = authentication.getName();
+        return generateTokenFromUsername(username);
+    }
+
+    public String generateTokenFromUsername(String username) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 

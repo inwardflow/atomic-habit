@@ -1,9 +1,11 @@
 package com.atomichabits.backend.service;
 
+import com.atomichabits.backend.dto.BadgeResponse;
 import com.atomichabits.backend.model.Badge;
 import com.atomichabits.backend.model.User;
 import com.atomichabits.backend.repository.BadgeRepository;
-import com.atomichabits.backend.repository.HabitCompletionRepository;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.atomichabits.backend.model.HabitCompletion;
@@ -17,9 +19,11 @@ import java.util.stream.Collectors;
 public class GamificationService {
 
     private final BadgeRepository badgeRepository;
+    private final MessageSource messageSource;
 
-    public GamificationService(BadgeRepository badgeRepository) {
+    public GamificationService(BadgeRepository badgeRepository, MessageSource messageSource) {
         this.badgeRepository = badgeRepository;
+        this.messageSource = messageSource;
     }
 
     public void checkAndAwardBadges(User user, int currentStreak, int totalCompletions, List<HabitCompletion> completions) {
@@ -101,5 +105,21 @@ public class GamificationService {
 
     public List<Badge> getUserBadges(Long userId) {
         return badgeRepository.findByUserId(userId);
+    }
+
+    public List<BadgeResponse> getLocalizedUserBadges(Long userId) {
+        return getUserBadges(userId).stream()
+                .map(this::mapToLocalizedResponse)
+                .collect(Collectors.toList());
+    }
+
+    private BadgeResponse mapToLocalizedResponse(Badge badge) {
+        return BadgeResponse.builder()
+                .id(badge.getId())
+                .name(messageSource.getMessage(badge.getName(), null, badge.getName(), LocaleContextHolder.getLocale()))
+                .description(messageSource.getMessage(badge.getDescription(), null, badge.getDescription(), LocaleContextHolder.getLocale()))
+                .icon(badge.getIcon())
+                .earnedAt(badge.getEarnedAt())
+                .build();
     }
 }

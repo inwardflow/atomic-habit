@@ -4,26 +4,25 @@ interface User {
   id?: number;
   email: string;
   identityStatement: string;
+  roles: string[];
 }
 
 interface AuthState {
   token: string | null;
   user: User | null;
-  setToken: (token: string) => void;
-  setUser: (user: User) => void;
+  isLoading: boolean;
+  setToken: (token: string | null) => void;
+  setUser: (user: User | null) => void;
+  setLoading: (loading: boolean) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: localStorage.getItem('token'),
+  token: null, // No localStorage
   user: null,
-  setToken: (token) => {
-    localStorage.setItem('token', token);
-    set({ token });
-  },
+  isLoading: true, // Start with loading true to check auth on mount
+  setToken: (token) => set({ token }),
   setUser: (user) => set({ user }),
-  logout: () => {
-    localStorage.removeItem('token');
-    set({ token: null, user: null });
-  },
+  setLoading: (isLoading) => set({ isLoading }),
+  logout: () => set({ token: null, user: null }),
 }));

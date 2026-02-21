@@ -31,7 +31,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "agentscope.enabled=false",
                 "coach.memory.llm-extraction-enabled=false"
         }
 )
@@ -49,7 +48,7 @@ class ApiFlowIntegrationTest {
     @Test
     void shouldCoverCoreUserFlowsAcrossAllControllers() throws Exception {
         String email = "e2e+" + UUID.randomUUID() + "@example.com";
-        String password = "password123";
+        String password = "StrongPass1!";
 
         ResponseEntity<String> registerResp = request(
                 HttpMethod.POST,
@@ -89,6 +88,7 @@ class ApiFlowIntegrationTest {
 
         ResponseEntity<String> meResp = request(HttpMethod.GET, "/api/users/me", token, null);
         assertTrue(meResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(meResp.getBody());
         assertTrue(meResp.getBody().contains(email));
 
         ResponseEntity<String> updateMeResp = request(
@@ -98,6 +98,7 @@ class ApiFlowIntegrationTest {
                 Map.of("identityStatement", "I am a calm finisher")
         );
         assertTrue(updateMeResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(updateMeResp.getBody());
         assertTrue(updateMeResp.getBody().contains("I am a calm finisher"));
 
         assertTrue(request(HttpMethod.GET, "/api/users/stats", token, null).getStatusCode().is2xxSuccessful());
@@ -122,6 +123,7 @@ class ApiFlowIntegrationTest {
 
         ResponseEntity<String> getGoalsResp = request(HttpMethod.GET, "/api/goals", token, null);
         assertTrue(getGoalsResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(getGoalsResp.getBody());
         assertTrue(getGoalsResp.getBody().contains("Run 5K"));
 
         assertTrue(request(HttpMethod.GET, "/api/goals/" + goalId, token, null).getStatusCode().is2xxSuccessful());
@@ -144,6 +146,7 @@ class ApiFlowIntegrationTest {
 
         ResponseEntity<String> habitsResp = request(HttpMethod.GET, "/api/habits", token, null);
         assertTrue(habitsResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(habitsResp.getBody());
         assertTrue(habitsResp.getBody().contains("Morning Walk"));
 
         ResponseEntity<String> updateHabitResp = request(
@@ -158,6 +161,7 @@ class ApiFlowIntegrationTest {
                 )
         );
         assertTrue(updateHabitResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(updateHabitResp.getBody());
         assertTrue(updateHabitResp.getBody().contains("Morning Walk Updated"));
 
         assertTrue(patchWithoutBody("/api/habits/" + habitId + "/status", token).is2xxSuccessful());
@@ -167,10 +171,12 @@ class ApiFlowIntegrationTest {
 
         ResponseEntity<String> completionsResp = request(HttpMethod.GET, "/api/habits/completions", token, null);
         assertTrue(completionsResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(completionsResp.getBody());
         assertTrue(completionsResp.getBody().contains(LocalDate.now().toString()));
 
         ResponseEntity<String> habitStatsResp = request(HttpMethod.GET, "/api/habits/" + habitId + "/stats", token, null);
         assertTrue(habitStatsResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(habitStatsResp.getBody());
         assertTrue(habitStatsResp.getBody().contains("currentStreak"));
 
         assertTrue(request(HttpMethod.DELETE, "/api/habits/" + habitId + "/complete", token, null).getStatusCode().is2xxSuccessful());
@@ -210,6 +216,7 @@ class ApiFlowIntegrationTest {
                 )
         );
         assertTrue(addHabitsToGoalResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(addHabitsToGoalResp.getBody());
         assertTrue(addHabitsToGoalResp.getBody().contains("Goal-linked stretch"));
 
         assertTrue(request(HttpMethod.DELETE, "/api/habits/" + habitId, token, null).getStatusCode().is2xxSuccessful());
@@ -245,10 +252,12 @@ class ApiFlowIntegrationTest {
 
         ResponseEntity<String> invalidHoursResp = request(HttpMethod.GET, "/api/moods/recent?hours=abc", token, null);
         assertTrue(invalidHoursResp.getStatusCode().is4xxClientError());
+        assertNotNull(invalidHoursResp.getBody());
         assertTrue(invalidHoursResp.getBody().contains("Invalid hours"));
 
         ResponseEntity<String> invalidSinceResp = request(HttpMethod.GET, "/api/moods/since?since=bad-date", token, null);
         assertTrue(invalidSinceResp.getStatusCode().is4xxClientError());
+        assertNotNull(invalidSinceResp.getBody());
         assertTrue(invalidSinceResp.getBody().contains("Invalid since"));
 
         String since = LocalDateTime.now().minusDays(1).withNano(0).toString();
@@ -256,6 +265,7 @@ class ApiFlowIntegrationTest {
 
         ResponseEntity<String> gratitudeLogsResp = request(HttpMethod.GET, "/api/moods/gratitude", token, null);
         assertTrue(gratitudeLogsResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(gratitudeLogsResp.getBody());
         assertTrue(gratitudeLogsResp.getBody().contains("GRATITUDE"));
 
         ResponseEntity<String> todayGratitudeResp = request(HttpMethod.GET, "/api/moods/gratitude/today", token, null);
@@ -268,6 +278,7 @@ class ApiFlowIntegrationTest {
                 Map.of("note", "Had a calm and focused morning.")
         );
         assertTrue(updateMoodResp.getStatusCode().is2xxSuccessful());
+        assertNotNull(updateMoodResp.getBody());
         assertTrue(updateMoodResp.getBody().contains("focused"));
 
         assertTrue(request(HttpMethod.DELETE, "/api/moods/" + overwhelmedId, token, null).getStatusCode().is2xxSuccessful());

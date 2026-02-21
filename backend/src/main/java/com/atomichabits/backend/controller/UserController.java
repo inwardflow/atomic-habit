@@ -8,15 +8,12 @@ import com.atomichabits.backend.dto.UserStatsResponse;
 import com.atomichabits.backend.service.GamificationService;
 import com.atomichabits.backend.service.UserService;
 import jakarta.validation.Valid;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -24,12 +21,10 @@ public class UserController {
 
     private final UserService userService;
     private final GamificationService gamificationService;
-    private final MessageSource messageSource;
 
-    public UserController(UserService userService, GamificationService gamificationService, MessageSource messageSource) {
+    public UserController(UserService userService, GamificationService gamificationService) {
         this.userService = userService;
         this.gamificationService = gamificationService;
-        this.messageSource = messageSource;
     }
 
     @GetMapping("/me")
@@ -74,15 +69,7 @@ public class UserController {
     @GetMapping("/badges")
     public ResponseEntity<List<BadgeResponse>> getUserBadges(Authentication authentication) {
         Long userId = userService.getUserProfile(authentication.getName()).getId();
-        List<BadgeResponse> badges = gamificationService.getUserBadges(userId).stream()
-                .map(b -> BadgeResponse.builder()
-                        .id(b.getId())
-                        .name(messageSource.getMessage(b.getName(), null, b.getName(), LocaleContextHolder.getLocale()))
-                        .description(messageSource.getMessage(b.getDescription(), null, b.getDescription(), LocaleContextHolder.getLocale()))
-                        .icon(b.getIcon())
-                        .earnedAt(b.getEarnedAt())
-                        .build())
-                .collect(Collectors.toList());
+        List<BadgeResponse> badges = gamificationService.getLocalizedUserBadges(userId);
         return ResponseEntity.ok(badges);
     }
 }

@@ -1,7 +1,6 @@
 package com.atomichabits.backend.service;
 
 import com.atomichabits.backend.dto.*;
-import com.atomichabits.backend.model.Badge;
 import com.atomichabits.backend.model.HabitCompletion;
 import com.atomichabits.backend.model.User;
 import com.atomichabits.backend.repository.HabitCompletionRepository;
@@ -27,15 +26,17 @@ public class UserService {
     private final GamificationService gamificationService;
     private final MoodRepository moodRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     public UserService(UserRepository userRepository, HabitCompletionRepository habitCompletionRepository,
                        GamificationService gamificationService, MoodRepository moodRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder, RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.habitCompletionRepository = habitCompletionRepository;
         this.gamificationService = gamificationService;
         this.moodRepository = moodRepository;
         this.passwordEncoder = passwordEncoder;
+        this.refreshTokenService = refreshTokenService;
     }
 
     public void changePassword(String email, String currentPassword, String newPassword) {
@@ -48,6 +49,9 @@ public class UserService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        
+        // Force logout all sessions
+        refreshTokenService.deleteByUserId(user.getId());
     }
 
     @Transactional
@@ -101,7 +105,7 @@ public class UserService {
         List<DailyCompletionDTO> last30Days = dailyCounts.entrySet().stream()
                 .map(e -> new DailyCompletionDTO(e.getKey(), e.getValue().intValue()))
                 .sorted(Comparator.comparing(DailyCompletionDTO::getDate))
-                .collect(Collectors.toList());
+                .toList();
 
         // 2. Completions by Habit
         Map<String, Integer> byHabit = completions.stream()
@@ -149,7 +153,7 @@ public class UserService {
             for (LocalDate day : moodDays) {
                 List<HabitCompletion> daysCompletions = completions.stream()
                         .filter(c -> c.getCompletedAt().toLocalDate().equals(day))
-                        .collect(Collectors.toList());
+                        .toList();
                 
                 totalCompletionsOnMoodDays += daysCompletions.size();
                 
@@ -164,7 +168,7 @@ public class UserService {
                     .sorted((e1, e2) -> e2.getValue().compareTo(e1.getValue()))
                     .limit(3)
                     .map(Map.Entry::getKey)
-                    .collect(Collectors.toList());
+                    .toList();
             
             insights.add(MoodInsightDTO.builder()
                     .mood(mood)
@@ -223,15 +227,7 @@ public class UserService {
         gamificationService.checkAndAwardBadges(user, currentStreak, totalCompletions, completions);
 
         // Fetch badges for response
-        List<BadgeResponse> badgeResponses = gamificationService.getUserBadges(user.getId()).stream()
-                .map(b -> BadgeResponse.builder()
-                        .id(b.getId())
-                        .name(b.getName())
-                        .description(b.getDescription())
-                        .icon(b.getIcon())
-                        .earnedAt(b.getEarnedAt())
-                        .build())
-                .collect(Collectors.toList());
+        List<BadgeResponse> badgeResponses = gamificationService.getLocalizedUserBadges(user.getId());
 
         return UserStatsResponse.builder()
                 .identityScore(identityScore)
@@ -249,7 +245,7 @@ public class UserService {
                 .map(c -> c.getCompletedAt().toLocalDate())
                 .distinct()
                 .sorted(Comparator.reverseOrder())
-                .collect(Collectors.toList());
+                .toList();
 
         if (dates.isEmpty()) return 0;
 
@@ -281,7 +277,7 @@ public class UserService {
                 .map(c -> c.getCompletedAt().toLocalDate())
                 .distinct()
                 .sorted()
-                .collect(Collectors.toList());
+                .toList();
 
         int maxStreak = 0;
         int currentStreak = 0;

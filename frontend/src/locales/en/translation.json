@@ -118,7 +118,8 @@
     "ongoing": "Ongoing",
     "status": {
       "completed": "Completed",
-      "in_progress": "In Progress"
+      "in_progress": "In Progress",
+      "archived": "Archived"
     }
   },
   "mood": {
@@ -185,6 +186,26 @@
       "delete": "Permanently Delete",
       "deleting": "Deleting..."
     },
+    "sessions": {
+      "title": "Active Sessions",
+      "subtitle": "Manage your active sessions and devices",
+      "logoutAll": "Log out of all devices",
+      "empty": "No active sessions found",
+      "current": "Current session",
+      "revoke": "Revoke session",
+      "revoked": "Session revoked",
+      "error": "Failed to revoke session",
+      "confirmLogoutAll": "Are you sure you want to log out of all devices?"
+    },
+    "history": {
+      "title": "Login History",
+      "subtitle": "Recent login activity",
+      "status": "Status",
+      "device": "Device",
+      "ip": "IP Address",
+      "time": "Time",
+      "empty": "No recent history"
+    },
     "toast": {
       "profile_error": "Failed to load profile",
       "update_success": "Profile updated!",
@@ -207,12 +228,15 @@
       "passwordLabel": "Password",
       "submit": "Sign in",
       "submitting": "Signing in...",
-      "failed": "Login failed"
+      "failed": "Login failed",
+      "tooManyRequests": "Too many requests. Please try again later.",
+      "accountLocked": "Account locked due to too many failed attempts."
     },
     "register": {
       "title": "Create Identity",
       "emailLabel": "Email",
       "passwordLabel": "Password",
+      "passwordRequirements": "Password must be at least 8 characters, include 1 uppercase, 1 lowercase, 1 number, and 1 special character.",
       "identityLabel": "Who do you want to become?",
       "identityPlaceholder": "e.g., I am a writer",
       "submit": "Start My Journey",
@@ -220,6 +244,7 @@
       "failed": "Registration failed"
     },
     "haveAccount": "Already have an account?",
-    "loginLink": "Login"
+    "loginLink": "Login",
+    "session_expired": "Session expired. Please login again."
   }
 }

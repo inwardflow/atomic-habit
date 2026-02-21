@@ -6,6 +6,7 @@ import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { useNotifications } from './hooks/useNotifications';
 import { useTranslation } from 'react-i18next';
+import { authService } from './services/authService';
 
 // Lazy-loaded pages
 const Login = React.lazy(() => import('./pages/Login'));
@@ -30,6 +31,12 @@ const PageLoader = () => {
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = useAuthStore((state) => state.token);
+  const isLoading = useAuthStore((state) => state.isLoading);
+
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
@@ -39,6 +46,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   const { theme } = useThemeStore();
   useNotifications();
+
+  useEffect(() => {
+    authService.checkAuth();
+  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
