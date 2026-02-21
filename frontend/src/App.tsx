@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
 import { useNotifications } from './hooks/useNotifications';
+import { useTranslation } from 'react-i18next';
 
 // Lazy-loaded pages
 const Login = React.lazy(() => import('./pages/Login'));
@@ -15,14 +16,17 @@ const CoachPage = React.lazy(() => import('./pages/CoachPage'));
 const GratitudeJar = React.lazy(() => import('./pages/GratitudeJar'));
 const Settings = React.lazy(() => import('./pages/Settings'));
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>
+const PageLoader = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t('loading')}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = useAuthStore((state) => state.token);

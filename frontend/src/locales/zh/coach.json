@@ -1,0 +1,133 @@
+{
+  "title": "AI 教练",
+  "weekly_review": "周复盘",
+  "weekly_review_history": "周复盘历史",
+  "start_chatting": "开始与你的原子习惯教练聊天吧！",
+  "placeholder": "向你的 AI 教练提问...",
+  "thinking": "教练正在思考...",
+  "send": "发送",
+  "starter": {
+    "title": "不知道从哪开始？先走这 3 步",
+    "subtitle": "1. 明确你想成为谁 2. 选一个 2 分钟动作 3. 立刻执行今天最小一步。",
+    "prompts": [
+      "我现在有点茫然，请你带我3步开始，越简单越好。",
+      "先问我3个问题，帮我找到第一个2分钟习惯。",
+      "按我今天的状态，给我一个最小可执行动作。"
+    ],
+    "example_placeholder": "例如：我该从哪一个微习惯开始？",
+    "need_starting_point": "需要一个起点？选一个："
+  },
+  "proposal": {
+    "title": "教练建议",
+    "habit": "习惯",
+    "two_minute": "2分钟版本",
+    "accept": "接受并保存",
+    "modify": "修改",
+    "identity": "身份",
+    "confirm_identity": "确认身份",
+    "tool": "工具",
+    "yes_setup": "好的，建立这个习惯！",
+    "change_details": "我想修改细节。",
+    "yes_identity": "是的，这就是我想成为的人！"
+  },
+  "plan": {
+    "title": "建议的习惯计划",
+    "suggested_plan": "建议计划",
+    "plan_prefix": "计划: {{name}}",
+    "start_small": "从小事做起",
+    "start_small_recommended": "从小事做起 (推荐)",
+    "add_all": "全部添加到习惯",
+    "add_all_challenge": "全部添加 (挑战模式)",
+    "add_full_plan": "添加完整计划 (挑战模式)",
+    "saving": "保存中...",
+    "two_min_label": "2分钟:",
+    "two_min_rule": "2分钟规则:"
+  },
+  "memory": {
+    "used": "使用的记忆",
+    "context": "上下文:",
+    "more": "+{{count}}"
+  },
+  "errors": {
+    "token": "后端 AI 服务 Token 无效。请配置有效的 AGENTSCOPE_MODEL_API_KEY。",
+    "agui": "AG-UI 错误: {{error}}",
+    "run_failed": "Agent 运行失败。",
+    "weekly_review_failed": "生成周复盘失败",
+    "add_plan_failed": "添加计划失败",
+    "add_starter_failed": "添加初始习惯失败",
+    "backend_error": "AG-UI 返回了后端错误。"
+  },
+  "success": {
+    "starter_added": "已添加第一个微习惯。保持轻松。",
+    "challenge_accepted": "挑战已接受！祝你好运！",
+    "great_choice": "很棒的选择！专注于这一小步是关键。"
+  },
+  "card": {
+    "weekly": {
+      "title": "每周胜利",
+      "subtitle": "关注收获，而非差距",
+      "completions": "完成次数",
+      "streak": "连胜天数",
+      "highlights": "高光时刻",
+      "note": "教练备注：",
+      "default_suggestion": "本周继续保持微小且持续的步骤。"
+    },
+    "focus": {
+      "title": "今日专注",
+      "subtitle": "只需一件事。只需 2 分钟。",
+      "mission": "你的任务",
+      "did_it": "我做到了！",
+      "worry": "别担心其他的。只做这件事。",
+      "success_title": "你做到了！",
+      "success_subtitle": "离你的身份更近了一步。"
+    },
+    "memory": {
+      "title": "AI 记忆上下文",
+      "subtitle": "你的教练记得关于你的事。",
+      "identity": "核心身份",
+      "not_set": "尚未设置",
+      "profile": "记忆档案",
+      "empty_profile": "继续聊天。你的教练将在这里保存模式、偏好和约束。",
+      "fact": "事实",
+      "insight": "洞察",
+      "summary": "总结",
+      "expires": "过期时间：",
+      "daily": "每日总结",
+      "empty_daily": "暂无总结。",
+      "empty_daily_sub": "多聊聊以生成洞察！"
+    }
+  },
+  "actions": {
+    "start_weekly_review": "开始周复盘",
+    "starting_weekly_review": "正在开始周复盘...",
+    "review_label": "复盘 {{index}}"
+  },
+  "defaults": {
+    "habit_name": "习惯 {{index}}",
+    "two_minute": "做2分钟 {{name}}",
+    "intention": "当我开始新的一天时",
+    "stack": "在我吃完早餐后"
+  },
+  "agent_activity": {
+    "phases": {
+      "connecting": "连接中...",
+      "thinking": "思考中",
+      "using_tools": "使用工具",
+      "reading_memory": "读取记忆",
+      "generating": "生成回复",
+      "done": "完成",
+      "error": "错误"
+    },
+    "tools": {
+      "get_habit_stats": "检查你的习惯",
+      "get_user_profile": "读取你的档案",
+      "create_first_habit": "创建习惯",
+      "save_user_identity": "保存身份",
+      "present_weekly_review": "准备周复盘",
+      "present_daily_focus": "设定今日专注",
+      "get_weekly_review_data": "加载复盘数据",
+      "search_memory": "搜索记忆",
+      "save_memory": "保存记忆"
+    }
+  }
+}

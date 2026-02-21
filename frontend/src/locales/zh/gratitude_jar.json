@@ -1,0 +1,19 @@
+{
+  "title": "感恩罐",
+  "back_to_dashboard": "返回仪表盘",
+  "subtitle": "“当你觉得一无所有时，看看这里。<br/>这些是你收集的瞬间。”",
+  "opening_jar": "正在打开罐子...",
+  "empty_state": "罐子是空的，但你的生活不是。<br/>去添加你的第一个回忆吧。",
+  "confirm_delete": "你确定要删除这段回忆吗？",
+  "delete_success": "回忆已删除。",
+  "delete_error": "删除失败。",
+  "update_success": "回忆已更新。",
+  "update_error": "更新失败。",
+  "view_all": "查看全部",
+  "placeholder": "你在想什么？",
+  "save": "保存打卡",
+  "edit": "编辑",
+  "toast_updated": "已更新你的感恩日记。",
+  "toast_saved": "已保存。感恩之心是奇迹的磁石。",
+  "toast_error": "保存失败。"
+}

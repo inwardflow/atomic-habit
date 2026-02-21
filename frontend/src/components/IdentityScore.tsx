@@ -4,6 +4,7 @@ import { Trophy, Flame, Target, Star, PartyPopper, Footprints, Diamond, Sunrise,
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { useTranslation } from 'react-i18next';
 
 interface IdentityScoreProps {
   stats: UserStats | null;
@@ -11,6 +12,7 @@ interface IdentityScoreProps {
 }
 
 const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
+  const { t } = useTranslation();
   const [prevLevel, setPrevLevel] = useState<number | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [newBadge, setNewBadge] = useState<Badge | null>(null);
@@ -53,11 +55,11 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
   const progressToNextLevel = stats.identityScore % 100;
   
   const getLevelTitle = (lvl: number) => {
-      if (lvl >= 15) return "Master";
-      if (lvl >= 10) return "Expert";
-      if (lvl >= 6) return "Practitioner";
-      if (lvl >= 3) return "Apprentice";
-      return "Novice";
+      if (lvl >= 15) return t('identity_score.levels.master');
+      if (lvl >= 10) return t('identity_score.levels.expert');
+      if (lvl >= 6) return t('identity_score.levels.practitioner');
+      if (lvl >= 3) return t('identity_score.levels.apprentice');
+      return t('identity_score.levels.novice');
   };
 
   const levelTitle = getLevelTitle(level);
@@ -89,13 +91,13 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="flex-1">
             <h2 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
-                I am a {identity}
+                {t('identity_score.title', { identity })}
             </h2>
             
             <div className="flex flex-wrap items-center gap-3 mb-3">
                 <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
                     <Star className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-                    <span className="text-sm font-bold text-white">Level {level}</span>
+                    <span className="text-sm font-bold text-white">{t('identity_score.level_label', { level })}</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-indigo-900/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-indigo-500/30">
                     <Trophy className="w-3.5 h-3.5 text-indigo-200" />
@@ -106,8 +108,8 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
             {/* Progress bar for level */}
             <div className="w-full max-w-md">
                 <div className="flex justify-between text-xs text-indigo-200 mb-1 font-medium px-1">
-                    <span>XP: {progressToNextLevel}/100</span>
-                    <span>Next: Level {level + 1}</span>
+                    <span>{t('identity_score.xp_label', { current: progressToNextLevel, total: 100 })}</span>
+                    <span>{t('identity_score.next_level', { level: level + 1 })}</span>
                 </div>
                 <div className="w-full bg-indigo-950/50 rounded-full h-2.5 overflow-hidden border border-indigo-500/20">
                     <motion.div 
@@ -125,14 +127,14 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
                 <Flame className={clsx("w-6 h-6 mb-1", stats.currentStreak > 0 ? "text-orange-400" : "text-slate-300")} />
                 <span className="text-2xl font-bold">{stats.currentStreak}</span>
                 <span className="text-xs text-indigo-200 uppercase tracking-wide">
-                    {stats.currentStreak > 0 ? 'Day Streak' : 'Ready to Start'}
+                    {stats.currentStreak > 0 ? t('identity_score.stats.streak') : t('identity_score.stats.ready')}
                 </span>
             </div>
             
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex flex-col items-center min-w-[100px]">
                 <Target className="w-6 h-6 mb-1 text-green-400" />
                 <span className="text-2xl font-bold">{stats.totalHabitsCompleted}</span>
-                <span className="text-xs text-indigo-200 uppercase tracking-wide">Small Wins</span>
+                <span className="text-xs text-indigo-200 uppercase tracking-wide">{t('identity_score.stats.small_wins')}</span>
             </div>
             </div>
         </div>
@@ -140,7 +142,7 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
         {/* Badges Section */}
         {stats.badges && stats.badges.length > 0 && (
             <div className="mt-6 pt-4 border-t border-white/10">
-                <p className="text-xs text-indigo-200 uppercase tracking-wide mb-2">Earned Badges ({stats.badges.length})</p>
+                <p className="text-xs text-indigo-200 uppercase tracking-wide mb-2">{t('identity_score.badges.title', { count: stats.badges.length })}</p>
                 <div className="flex flex-wrap gap-2">
                     {stats.badges.map((badge) => (
                         <div key={badge.id} className="group/badge relative bg-white/10 p-2 rounded-lg hover:bg-white/20 transition-colors cursor-help">
@@ -159,7 +161,7 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
         {/* Encouraging message if streak is broken/low */}
         {stats.currentStreak === 0 && (
             <div className="mt-4 text-xs text-indigo-200 text-center bg-indigo-900/30 py-1 rounded-lg">
-                "You don't have to be perfect. You just have to show up today."
+                {t('identity_score.encouragement.imperfect')}
             </div>
         )}
         </div>
@@ -178,10 +180,10 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
                             <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <PartyPopper className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
                             </div>
-                            <h2 className="text-3xl font-black text-indigo-900 dark:text-white mb-2">LEVEL UP!</h2>
-                            <p className="text-indigo-600 dark:text-indigo-300 font-medium text-lg">You are now Level {level}</p>
+                            <h2 className="text-3xl font-black text-indigo-900 dark:text-white mb-2">{t('identity_score.levelup.title')}</h2>
+                            <p className="text-indigo-600 dark:text-indigo-300 font-medium text-lg">{t('identity_score.levelup.subtitle', { level })}</p>
                             <div className="mt-4 bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg text-sm text-indigo-800 dark:text-indigo-200">
-                                "Every level is proof that you are becoming the person you want to be."
+                                {t('identity_score.levelup.quote')}
                             </div>
                         </div>
                     </div>
@@ -200,7 +202,7 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
                             {getBadgeIcon(newBadge.icon)}
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">New Badge Unlocked!</p>
+                            <p className="text-xs font-bold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">{t('identity_score.new_badge.title')}</p>
                             <h3 className="font-bold text-slate-900 dark:text-white">{newBadge.name}</h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{newBadge.description}</p>
                         </div>

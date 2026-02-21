@@ -1,0 +1,57 @@
+{
+  "wizard": {
+    "title": "Create New Habit (Step {{step}}/{{total}})",
+    "step1": {
+      "label": "Habit Name",
+      "placeholder": "e.g. Read 1 page",
+      "quote": "\"The secret to getting results that last is to never stop making improvements.\"",
+      "continue": "Continue to Plan (Recommended)",
+      "quick_add": "Quick Add (Skip Planning)",
+      "creating": "Creating..."
+    },
+    "step2": {
+      "label": "Make it Easy (2-Minute Version)",
+      "subtitle": "Scale it down to just 2 minutes.",
+      "placeholder": "e.g. Open the book",
+      "quote": "\"A new habit should not feel like a challenge. The actions that follow can be challenging, but the first two minutes should be easy.\""
+    },
+    "step3": {
+      "label": "Make it Obvious (Implementation Intention)",
+      "subtitle": "I will [BEHAVIOR] at [TIME] in [LOCATION].",
+      "placeholder": "I will read at 8pm in my bedroom",
+      "quote": "\"Many people think they lack motivation when what they really lack is clarity.\""
+    },
+    "step4": {
+      "label": "Make it Obvious (Habit Stacking)",
+      "subtitle": "After I [CURRENT HABIT], I will [NEW HABIT].",
+      "placeholder": "After I pour my coffee, I will read 1 page",
+      "quote": "\"One of the best ways to build a new habit is to identify a current habit you already do each day and then stack your new behavior on top.\""
+    },
+    "step5": {
+      "label": "Schedule (Frequency)",
+      "subtitle": "How often do you want to do this habit?",
+      "every_day": "Every Day",
+      "specific_days": "Specific Days",
+      "quote": "\"You do not rise to the level of your goals. You fall to the level of your systems.\"",
+      "create": "Create Habit",
+      "creating": "Creating..."
+    },
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "toast": {
+      "name_required": "Habit name is required",
+      "success": "Habit created successfully!",
+      "failed": "Failed to create habit"
+    }
+  },
+  "days": {
+    "MONDAY": "Mon",
+    "TUESDAY": "Tue",
+    "WEDNESDAY": "Wed",
+    "THURSDAY": "Thu",
+    "FRIDAY": "Fri",
+    "SATURDAY": "Sat",
+    "SUNDAY": "Sun"
+  }
+}

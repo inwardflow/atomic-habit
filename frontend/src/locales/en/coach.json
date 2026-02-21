@@ -1,0 +1,133 @@
+{
+  "title": "AI Coach",
+  "weekly_review": "Weekly Review",
+  "weekly_review_history": "Weekly Review History",
+  "start_chatting": "Start chatting with your Atomic Habits Coach!",
+  "placeholder": "Ask your AI coach anything...",
+  "thinking": "Coach is thinking...",
+  "send": "Send",
+  "starter": {
+    "title": "Don't know where to start? Try these 3 steps",
+    "subtitle": "1. Define who you want to be 2. Pick a 2-minute action 3. Do the smallest step today.",
+    "prompts": [
+      "I'm feeling lost, guide me in 3 simple steps.",
+      "Ask me 3 questions to find my first 2-minute habit.",
+      "Give me one tiny action I can do right now."
+    ],
+    "example_placeholder": "For example: where should I start?",
+    "need_starting_point": "Need a starting point? Pick one:"
+  },
+  "proposal": {
+    "title": "Coach Proposal",
+    "habit": "Habit",
+    "two_minute": "2-Min Version",
+    "accept": "Accept & Save",
+    "modify": "Modify",
+    "identity": "Identity",
+    "confirm_identity": "Confirm Identity",
+    "tool": "Tool",
+    "yes_setup": "Yes, let's set it up!",
+    "change_details": "I'd like to change the details.",
+    "yes_identity": "Yes, that's who I want to be!"
+  },
+  "plan": {
+    "title": "Suggested Habit Plan",
+    "suggested_plan": "Suggested Plan",
+    "plan_prefix": "Plan: {{name}}",
+    "start_small": "Start Small",
+    "start_small_recommended": "Start Small (Recommended)",
+    "add_all": "Add All to Habits",
+    "add_all_challenge": "Add All (Challenge Mode)",
+    "add_full_plan": "Add Full Plan (Challenge Mode)",
+    "saving": "Saving...",
+    "two_min_label": "2-Min:",
+    "two_min_rule": "2-Min Rule:"
+  },
+  "memory": {
+    "used": "Memory Used",
+    "context": "Context:",
+    "more": "+{{count}}"
+  },
+  "errors": {
+    "token": "AI service token is invalid on backend. Please configure a valid AGENTSCOPE_MODEL_API_KEY.",
+    "agui": "AG-UI error: {{error}}",
+    "run_failed": "Agent run failed.",
+    "weekly_review_failed": "Failed to generate weekly review",
+    "add_plan_failed": "Failed to add plan",
+    "add_starter_failed": "Failed to add starter habit",
+    "backend_error": "AG-UI returned an error from backend."
+  },
+  "success": {
+    "starter_added": "Added the first tiny habit. Keep it easy.",
+    "challenge_accepted": "Challenge accepted! Good luck!",
+    "great_choice": "Great choice! Focusing on one small step is the key."
+  },
+  "card": {
+    "weekly": {
+      "title": "Weekly Wins",
+      "subtitle": "Focus on the Gain, not the Gap",
+      "completions": "Completions",
+      "streak": "Day Streak",
+      "highlights": "Highlights",
+      "note": "Coach's Note:",
+      "default_suggestion": "Keep going with small, consistent steps this week."
+    },
+    "focus": {
+      "title": "Daily Focus",
+      "subtitle": "Just one thing. Just 2 minutes.",
+      "mission": "Your Mission",
+      "did_it": "I Did It!",
+      "worry": "Don't worry about the rest. Just do this.",
+      "success_title": "You did it!",
+      "success_subtitle": "One step closer to your identity."
+    },
+    "memory": {
+      "title": "AI Memory Context",
+      "subtitle": "What your coach remembers about you.",
+      "identity": "Core Identity",
+      "not_set": "Not set yet",
+      "profile": "Remembered Profile",
+      "empty_profile": "Keep chatting. Your coach will save patterns, preferences, and constraints here.",
+      "fact": "Fact",
+      "insight": "Insight",
+      "summary": "Summary",
+      "expires": "Expires:",
+      "daily": "Daily Summaries",
+      "empty_daily": "No summaries yet.",
+      "empty_daily_sub": "Chat more to generate insights!"
+    }
+  },
+  "actions": {
+    "start_weekly_review": "Start Weekly Review",
+    "starting_weekly_review": "Starting Weekly Review...",
+    "review_label": "Review {{index}}"
+  },
+  "defaults": {
+    "habit_name": "Habit {{index}}",
+    "two_minute": "Do 2 minutes of {{name}}",
+    "intention": "When I start my day",
+    "stack": "After I finish breakfast"
+  },
+  "agent_activity": {
+    "phases": {
+      "connecting": "Connecting...",
+      "thinking": "Thinking",
+      "using_tools": "Using tools",
+      "reading_memory": "Reading memory",
+      "generating": "Generating response",
+      "done": "Done",
+      "error": "Error"
+    },
+    "tools": {
+      "get_habit_stats": "Checking your habits",
+      "get_user_profile": "Reading your profile",
+      "create_first_habit": "Creating a habit",
+      "save_user_identity": "Saving identity",
+      "present_weekly_review": "Preparing weekly review",
+      "present_daily_focus": "Setting daily focus",
+      "get_weekly_review_data": "Loading review data",
+      "search_memory": "Searching memory",
+      "save_memory": "Saving to memory"
+    }
+  }
+}

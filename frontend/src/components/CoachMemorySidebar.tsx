@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { getCoachMemories } from '../api/coach';
 import type { CoachMemory } from '../api/coach';
 import { Brain, User, Calendar, Lightbulb, Pin } from 'lucide-react';
 
 const CoachMemorySidebar = () => {
+    const { t } = useTranslation('coach');
     const user = useAuthStore((state) => state.user);
     const [memories, setMemories] = useState<CoachMemory[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -65,9 +67,9 @@ const CoachMemorySidebar = () => {
     };
 
     const typeBadgeText = (type: CoachMemory['type']) => {
-        if (type === 'LONG_TERM_FACT') return 'Fact';
-        if (type === 'USER_INSIGHT') return 'Insight';
-        return 'Summary';
+        if (type === 'LONG_TERM_FACT') return t('card.memory.fact');
+        if (type === 'USER_INSIGHT') return t('card.memory.insight');
+        return t('card.memory.summary');
     };
 
     return (
@@ -75,9 +77,9 @@ const CoachMemorySidebar = () => {
             <div className="p-4 border-b border-gray-100">
                 <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                     <Brain className="w-5 h-5 text-indigo-600" />
-                    AI Memory Context
+                    {t('card.memory.title')}
                 </h2>
-                <p className="text-xs text-gray-500 mt-1">What your coach remembers about you.</p>
+                <p className="text-xs text-gray-500 mt-1">{t('card.memory.subtitle')}</p>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -85,18 +87,18 @@ const CoachMemorySidebar = () => {
                 <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
                     <div className="flex items-center gap-2 mb-2 text-indigo-800 font-medium">
                         <User className="w-4 h-4" />
-                        <span>Core Identity</span>
+                        <span>{t('card.memory.identity')}</span>
                     </div>
                     <p className="text-indigo-900 font-semibold italic text-sm">
-                        "{user.identityStatement || "Not set yet"}"
+                        "{user.identityStatement || t('card.memory.not_set')}"
                     </p>
                 </div>
 
                 <div>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Remembered Profile</h3>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t('card.memory.profile')}</h3>
                     {profileMemories.length === 0 ? (
                         <div className="text-sm text-gray-500 bg-gray-50 border border-gray-100 rounded-lg p-3">
-                            Keep chatting. Your coach will save patterns, preferences, and constraints here.
+                            {t('card.memory.empty_profile')}
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -117,7 +119,7 @@ const CoachMemorySidebar = () => {
                                     <p className="text-sm text-gray-700 leading-relaxed">{memory.content}</p>
                                     {memory.expiresAt && (
                                         <p className="mt-2 text-[10px] text-gray-400">
-                                            Expires: {new Date(memory.expiresAt).toLocaleDateString()}
+                                            {t('card.memory.expires')} {new Date(memory.expiresAt).toLocaleDateString()}
                                         </p>
                                     )}
                                 </div>
@@ -128,7 +130,7 @@ const CoachMemorySidebar = () => {
 
                 {/* Daily Summaries */}
                 <div>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Daily Summaries</h3>
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">{t('card.memory.daily')}</h3>
                     
                     {isLoading ? (
                         <div className="space-y-3">
@@ -139,8 +141,8 @@ const CoachMemorySidebar = () => {
                     ) : dailySummaries.length === 0 ? (
                         <div className="text-center py-8 text-gray-400 text-sm">
                             <Calendar className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                            <p>No summaries yet.</p>
-                            <p className="text-xs mt-1">Chat more to generate insights!</p>
+                            <p>{t('card.memory.empty_daily')}</p>
+                            <p className="text-xs mt-1">{t('card.memory.empty_daily_sub')}</p>
                         </div>
                     ) : (
                         <div className="space-y-4">

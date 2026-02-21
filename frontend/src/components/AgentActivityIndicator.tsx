@@ -1,5 +1,7 @@
 import React from 'react';
 import { Brain, Wrench, Database, MessageSquare, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 export type AgentPhase =
   | 'idle'
@@ -25,58 +27,54 @@ export interface AgentActivity {
   partialContent?: string;
 }
 
-const TOOL_DISPLAY_NAMES: Record<string, string> = {
-  get_habit_stats: 'Checking your habits',
-  get_user_profile: 'Reading your profile',
-  create_first_habit: 'Creating a habit',
-  save_user_identity: 'Saving identity',
-  present_weekly_review: 'Preparing weekly review',
-  present_daily_focus: 'Setting daily focus',
-  get_weekly_review_data: 'Loading review data',
-  search_memory: 'Searching memory',
-  save_memory: 'Saving to memory',
+const getToolDisplayName = (name: string, t: TFunction<"coach", undefined>): string => {
+  const key = `agent_activity.tools.${name}`;
+  // @ts-expect-error Dynamic keys are not strictly typed
+  const translated = t(key) as string;
+  // If translation returns the key itself (meaning missing), fallback to a formatted name
+  return translated !== key ? translated : name.replace(/_/g, ' ');
 };
 
-const getToolDisplayName = (name: string): string =>
-  TOOL_DISPLAY_NAMES[name] || name.replace(/_/g, ' ');
-
-const PHASE_CONFIG: Record<AgentPhase, { icon: React.ReactNode; label: string; color: string }> = {
-  idle: { icon: null, label: '', color: '' },
-  connecting: {
-    icon: <Loader2 size={14} className="animate-spin" />,
-    label: 'Connecting...',
-    color: 'text-gray-500',
-  },
-  thinking: {
-    icon: <Brain size={14} className="animate-pulse" />,
-    label: 'Thinking',
-    color: 'text-indigo-600',
-  },
-  tool_calling: {
-    icon: <Wrench size={14} className="animate-bounce" />,
-    label: 'Using tools',
-    color: 'text-amber-600',
-  },
-  reading_memory: {
-    icon: <Database size={14} className="animate-pulse" />,
-    label: 'Reading memory',
-    color: 'text-purple-600',
-  },
-  generating: {
-    icon: <MessageSquare size={14} className="animate-pulse" />,
-    label: 'Generating response',
-    color: 'text-green-600',
-  },
-  done: {
-    icon: <CheckCircle2 size={14} />,
-    label: 'Done',
-    color: 'text-green-600',
-  },
-  error: {
-    icon: <AlertCircle size={14} />,
-    label: 'Error',
-    color: 'text-red-500',
-  },
+const getPhaseConfig = (phase: AgentPhase, t: TFunction<"coach", undefined>) => {
+  const configs: Record<AgentPhase, { icon: React.ReactNode; label: string; color: string }> = {
+    idle: { icon: null, label: '', color: '' },
+    connecting: {
+      icon: <Loader2 size={14} className="animate-spin" />,
+      label: t('agent_activity.phases.connecting'),
+      color: 'text-gray-500',
+    },
+    thinking: {
+      icon: <Brain size={14} className="animate-pulse" />,
+      label: t('agent_activity.phases.thinking'),
+      color: 'text-indigo-600',
+    },
+    tool_calling: {
+      icon: <Wrench size={14} className="animate-bounce" />,
+      label: t('agent_activity.phases.using_tools'),
+      color: 'text-amber-600',
+    },
+    reading_memory: {
+      icon: <Database size={14} className="animate-pulse" />,
+      label: t('agent_activity.phases.reading_memory'),
+      color: 'text-purple-600',
+    },
+    generating: {
+      icon: <MessageSquare size={14} className="animate-pulse" />,
+      label: t('agent_activity.phases.generating'),
+      color: 'text-green-600',
+    },
+    done: {
+      icon: <CheckCircle2 size={14} />,
+      label: t('agent_activity.phases.done'),
+      color: 'text-green-600',
+    },
+    error: {
+      icon: <AlertCircle size={14} />,
+      label: t('agent_activity.phases.error'),
+      color: 'text-red-500',
+    },
+  };
+  return configs[phase];
 };
 
 const formatElapsed = (ms: number): string => {
@@ -95,11 +93,12 @@ const AgentActivityIndicator: React.FC<AgentActivityIndicatorProps> = ({
   activity,
   compact = false,
 }) => {
+  const { t } = useTranslation('coach');
   const { phase, toolCalls, elapsedMs } = activity;
 
   if (phase === 'idle' || phase === 'done') return null;
 
-  const config = PHASE_CONFIG[phase];
+  const config = getPhaseConfig(phase, t);
   const elapsed = formatElapsed(elapsedMs);
 
   if (compact) {
@@ -109,7 +108,7 @@ const AgentActivityIndicator: React.FC<AgentActivityIndicatorProps> = ({
         <span className={`font-medium ${config.color}`}>{config.label}</span>
         {toolCalls.length > 0 && (
           <span className="text-gray-400">
-            — {getToolDisplayName(toolCalls[toolCalls.length - 1].name)}
+            — {getToolDisplayName(toolCalls[toolCalls.length - 1].name, t)}
           </span>
         )}
         {elapsed && <span className="ml-auto text-gray-300">{elapsed}</span>}
@@ -138,7 +137,7 @@ const AgentActivityIndicator: React.FC<AgentActivityIndicatorProps> = ({
                 <CheckCircle2 size={10} className="text-green-500 shrink-0" />
               )}
               <span className={tc.status === 'running' ? 'text-amber-700 font-medium' : 'text-gray-500'}>
-                {getToolDisplayName(tc.name)}
+                {getToolDisplayName(tc.name, t)}
               </span>
             </div>
           ))}

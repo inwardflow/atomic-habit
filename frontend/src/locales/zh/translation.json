@@ -1,0 +1,225 @@
+{
+  "loading": "加载中...",
+  "error": {
+    "unexpected": "发生了一个意外错误。",
+    "title": "出错了",
+    "reload": "重新加载页面"
+  },
+  "app": {
+    "title": "原子习惯",
+    "welcome": "欢迎回来",
+    "login": "登录",
+    "register": "注册"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "analytics": "统计分析",
+    "habits": "习惯",
+    "coach": "AI 教练",
+    "settings": "设置",
+    "logout": "退出登录"
+  },
+  "dashboard": {
+    "greeting": "欢迎回来，",
+    "subtitle": "让我们把今天变得好 1%。",
+    "no_habits": {
+      "title": "还没有习惯",
+      "subtitle": "从创建你的第一个习惯开始吧。",
+      "cta": "创建第一个习惯"
+    },
+    "sections": {
+      "identity": "我的身份之旅",
+      "identity_subtitle": "关注你想成为谁，而不仅仅是你想达成什么。",
+      "habits": "每日习惯",
+      "habits_subtitle": "小步骤，大成果。",
+      "goals": "当前目标"
+    },
+    "buttons": {
+      "new_habit": "新建习惯",
+      "chat": "与 AI 教练聊天"
+    }
+  },
+  "habit_card": {
+    "status": {
+      "paused": "已暂停",
+      "rest_day": "休息日"
+    },
+    "streak": {
+      "day": "天",
+      "days": "天"
+    },
+    "menu": {
+      "start_timer": "开始 2 分钟计时",
+      "rename": "重命名",
+      "pause": "暂停习惯",
+      "resume": "恢复习惯",
+      "delete": "删除",
+      "delete_confirm": "你确定吗？此操作无法撤销。"
+    },
+    "labels": {
+      "when_where": "时间 / 地点",
+      "habit_stack": "习惯叠加",
+      "two_min_rule": "2分钟规则"
+    },
+    "actions": {
+      "mark_complete": "标记为完成",
+      "mark_incomplete": "标记为未完成"
+    },
+    "notifications": {
+      "complete": "干得好！进步了 1%",
+      "timer_complete": "计时结束！习惯已标记为完成。"
+    }
+  },
+  "identity_score": {
+    "title": "我是 {{identity}}",
+    "levels": {
+      "master": "大师",
+      "expert": "专家",
+      "practitioner": "实践者",
+      "apprentice": "学徒",
+      "novice": "新手"
+    },
+    "level_label": "等级 {{level}}",
+    "xp_label": "经验值: {{current}}/{{total}}",
+    "next_level": "下一级: 等级 {{level}}",
+    "stats": {
+      "streak": "连胜天数",
+      "ready": "准备开始",
+      "small_wins": "小胜利"
+    },
+    "badges": {
+      "title": "获得的徽章 ({{count}})"
+    },
+    "encouragement": {
+      "imperfect": "你不必完美。你只需要今天出现。"
+    },
+    "levelup": {
+      "title": "升级了！",
+      "subtitle": "你现在是 {{level}} 级了",
+      "quote": "“每一级都是你在成为你想成为的人的证明。”"
+    },
+    "new_badge": {
+      "title": "解锁新徽章！"
+    }
+  },
+  "heatmap": {
+    "title": "一致性地图 (最近90天)",
+    "subtitle": "每一个方块都是一次胜利",
+    "legend": {
+      "rest": "休息",
+      "action": "行动"
+    }
+  },
+  "goal_list": {
+    "system_label": "你的日常系统",
+    "more_habits": "+ {{count}} 个更多习惯",
+    "active_journey": "进行中的旅程",
+    "target": "目标: {{date}}",
+    "ongoing": "进行中",
+    "status": {
+      "completed": "已完成",
+      "in_progress": "进行中"
+    }
+  },
+  "mood": {
+    "title": "你现在感觉如何？",
+    "placeholder": "你在想什么？",
+    "add_note": "添加备注 (可选)",
+    "save_btn": "保存打卡",
+    "saving_btn": "保存中...",
+    "cancel_btn": "取消",
+    "success": "心情已记录。",
+    "error": "记录心情失败。",
+    "types": {
+      "motivated": "充满动力",
+      "focused": "专注",
+      "happy": "开心",
+      "neutral": "平静",
+      "tired": "疲惫",
+      "sad": "难过",
+      "anxious": "焦虑",
+      "frustrated": "受挫"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "profile": {
+      "title": "个人资料",
+      "subtitle": "您的身份和账户详情",
+      "email": "邮箱",
+      "identityStatement": "身份宣言",
+      "identityPlaceholder": "我是一个...",
+      "identityHint": "“你采取的每一个行动都是对你想成为的人的一张投票。”",
+      "save": "保存更改",
+      "saving": "保存中...",
+      "saved": "已保存！"
+    },
+    "preferences": {
+      "title": "偏好设置",
+      "subtitle": "自定义您的体验",
+      "language": "语言",
+      "theme": "主题",
+      "darkMode": "深色模式",
+      "lightMode": "浅色模式",
+      "notifications": "通知",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "blocked": "已被浏览器阻止"
+    },
+    "security": {
+      "title": "安全",
+      "subtitle": "更改您的密码",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认新密码",
+      "changePassword": "更改密码",
+      "changing": "更改中..."
+    },
+    "dangerZone": {
+      "title": "危险区域",
+      "subtitle": "不可逆操作",
+      "deleteAccount": "删除我的账户",
+      "deleteWarning": "这将永久删除您的账户和所有数据。此操作无法撤销。",
+      "confirmPassword": "输入密码以确认",
+      "cancel": "取消",
+      "delete": "永久删除",
+      "deleting": "删除中..."
+    },
+    "toast": {
+      "profile_error": "加载个人资料失败",
+      "update_success": "个人资料已更新！",
+      "update_error": "更新个人资料失败",
+      "password_mismatch": "新密码不匹配",
+      "password_min_length": "密码至少需要6个字符",
+      "password_success": "密码修改成功！",
+      "password_error": "修改密码失败",
+      "delete_confirm_password": "请输入密码以确认",
+      "delete_success": "账户已删除。再见！",
+      "delete_error": "删除账户失败"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "登录您的账户",
+      "subtitle": "或者",
+      "createAccount": "创建一个新账户",
+      "emailLabel": "邮箱地址",
+      "passwordLabel": "密码",
+      "submit": "登录",
+      "submitting": "登录中...",
+      "failed": "登录失败"
+    },
+    "register": {
+      "title": "创建身份",
+      "emailLabel": "邮箱",
+      "passwordLabel": "密码",
+      "identityLabel": "你想成为谁？",
+      "identityPlaceholder": "例如：我是一名作家",
+      "submit": "开启旅程",
+      "success": "注册成功！请登录。",
+      "failed": "注册失败"
+    },
+    "haveAccount": "已有账户？",
+    "loginLink": "登录"
+  }
+}
