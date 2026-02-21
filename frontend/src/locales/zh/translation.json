@@ -118,7 +118,8 @@
     "ongoing": "进行中",
     "status": {
       "completed": "已完成",
-      "in_progress": "进行中"
+      "in_progress": "进行中",
+      "archived": "已归档"
     }
   },
   "mood": {
@@ -185,6 +186,26 @@
       "delete": "永久删除",
       "deleting": "删除中..."
     },
+    "sessions": {
+      "title": "活跃会话",
+      "subtitle": "管理您的活跃会话和设备",
+      "logoutAll": "退出所有设备",
+      "empty": "未找到活跃会话",
+      "current": "当前会话",
+      "revoke": "撤销会话",
+      "revoked": "会话已撤销",
+      "error": "撤销会话失败",
+      "confirmLogoutAll": "您确定要退出所有设备吗？"
+    },
+    "history": {
+      "title": "登录历史",
+      "subtitle": "最近的登录活动",
+      "status": "状态",
+      "device": "设备",
+      "ip": "IP地址",
+      "time": "时间",
+      "empty": "无最近历史"
+    },
     "toast": {
       "profile_error": "加载个人资料失败",
       "update_success": "个人资料已更新！",
@@ -207,12 +228,15 @@
       "passwordLabel": "密码",
       "submit": "登录",
       "submitting": "登录中...",
-      "failed": "登录失败"
+      "failed": "登录失败",
+      "tooManyRequests": "请求过多。请稍后再试。",
+      "accountLocked": "由于失败尝试过多，账户已被锁定。"
     },
     "register": {
       "title": "创建身份",
       "emailLabel": "邮箱",
       "passwordLabel": "密码",
+      "passwordRequirements": "密码必须至少8个字符，包含1个大写字母，1个小写字母，1个数字和1个特殊字符。",
       "identityLabel": "你想成为谁？",
       "identityPlaceholder": "例如：我是一名作家",
       "submit": "开启旅程",
@@ -220,6 +244,7 @@
       "failed": "注册失败"
     },
     "haveAccount": "已有账户？",
-    "loginLink": "登录"
+    "loginLink": "登录",
+    "session_expired": "会话已过期，请重新登录。"
   }
 }

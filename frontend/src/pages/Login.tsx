@@ -1,27 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import api from '../api/axios';
-import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/authService';
 import { ArrowRight } from 'lucide-react';
 
 const Login = () => {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const setToken = useAuthStore((state) => state.setToken);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      const response = await api.post('/auth/login', { email, password });
-      setToken(response.data.accessToken);
+      await authService.login({ email, password });
       navigate('/dashboard');
-    } catch {
-      alert(t('auth.login.failed'));
+    } catch (err: unknown) {
+      console.error(err);
+      const apiError = err as any;
+      if (apiError.response) {
+        if (apiError.response.status === 429) {
+          setError(t('auth.login.tooManyRequests'));
+        } else if (apiError.response.status === 403 && apiError.response.data && apiError.response.data.error && apiError.response.data.error.includes("locked")) {
+          setError(t('auth.login.accountLocked'));
+        } else if (apiError.response.data?.error) {
+          setError(apiError.response.data.error);
+        } else {
+          setError(t('auth.login.failed'));
+        }
+      } else {
+        setError(t('auth.login.failed'));
+      }
     } finally {
       setLoading(false);
     }
@@ -43,6 +56,7 @@ const Login = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white px-4 py-8 shadow-xl ring-1 ring-slate-900/5 sm:rounded-xl sm:px-10">
+          {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm text-center">{error}</div>}
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium leading-6 text-slate-900">

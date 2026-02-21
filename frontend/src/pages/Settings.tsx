@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Lock, Trash2, Moon, Sun, Bell, BellOff, Save, AlertTriangle, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, User, Lock, Trash2, Moon, Sun, Bell, BellOff, Save, AlertTriangle, Check, Sparkles, Smartphone, Laptop, Globe, LogOut } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { useNotifications } from '../hooks/useNotifications';
 import api from '../api/axios';
-import toast from 'react-hot-toast';
-import { useTranslation } from 'react-i18next';
+import { authService } from '../services/authService';
+import type { Session, LoginHistory } from '../types/authTypes';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const Settings = () => {
@@ -28,6 +30,14 @@ const Settings = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  // Sessions
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  
+  // Login History
+  const [loginHistory, setLoginHistory] = useState<LoginHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // Delete Account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -46,7 +56,34 @@ const Settings = () => {
         toast.error(t('settings.toast.profile_error'));
       }
     };
+    
+    const fetchSessions = async () => {
+        setSessionsLoading(true);
+        try {
+            const data = await authService.getSessions();
+            setSessions(data);
+        } catch {
+            // silent fail
+        } finally {
+            setSessionsLoading(false);
+        }
+    };
+    
+    const fetchHistory = async () => {
+        setHistoryLoading(true);
+        try {
+            const data = await authService.getLoginHistory();
+            setLoginHistory(data);
+        } catch {
+            // silent fail
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+    
     fetchProfile();
+    fetchSessions();
+    fetchHistory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -110,6 +147,42 @@ const Settings = () => {
     } finally {
       setDeleteLoading(false);
     }
+  };
+  
+  const handleRevokeSession = async (sessionId: number) => {
+      try {
+          await authService.revokeSession(sessionId);
+          setSessions(sessions.filter(s => s.id !== sessionId));
+          toast.success(t('settings.sessions.revoked'));
+      } catch {
+          toast.error(t('settings.sessions.error'));
+      }
+  };
+  
+  const handleRevokeAllSessions = async () => {
+      if (window.confirm(t('settings.sessions.confirmLogoutAll'))) {
+          try {
+              await authService.logoutAll();
+              navigate('/login');
+          } catch {
+              toast.error(t('settings.sessions.error'));
+          }
+      }
+  };
+
+  const getDeviceIcon = (item: Session | LoginHistory) => {
+      if (item.deviceType === 'Mobile') {
+           return <Smartphone className="w-5 h-5 text-slate-500" />;
+      }
+      if (item.deviceType === 'Desktop') {
+           return <Laptop className="w-5 h-5 text-slate-500" />;
+      }
+      
+      const lower = item.deviceInfo.toLowerCase();
+      if (lower.includes('mobile') || lower.includes('android') || lower.includes('iphone')) {
+          return <Smartphone className="w-5 h-5 text-slate-500" />;
+      }
+      return <Laptop className="w-5 h-5 text-slate-500" />;
   };
 
   return (
@@ -336,6 +409,139 @@ const Settings = () => {
               {passwordLoading ? t('settings.security.changing') : t('settings.security.changePassword')}
             </button>
           </div>
+        </section>
+
+        {/* Active Sessions Section */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                        <Globe className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('settings.sessions.title')}</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.sessions.subtitle')}</p>
+                    </div>
+                </div>
+                <button
+                    onClick={handleRevokeAllSessions}
+                    className="text-sm text-red-600 hover:text-red-700 font-medium"
+                >
+                    {t('settings.sessions.logoutAll')}
+                </button>
+            </div>
+
+            <div className="space-y-4">
+                {sessionsLoading ? (
+                    <div className="text-center py-4 text-slate-500">{t('loading')}</div>
+                ) : sessions.length === 0 ? (
+                    <div className="text-center py-4 text-slate-500">{t('settings.sessions.empty')}</div>
+                ) : (
+                    sessions.map((session) => (
+                        <div key={session.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
+                                    {getDeviceIcon(session)}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-medium text-slate-900 dark:text-white text-sm">
+                                            {session.browser && session.operatingSystem 
+                                                ? `${session.browser} on ${session.operatingSystem}`
+                                                : (session.deviceInfo ? session.deviceInfo.substring(0, 30) + (session.deviceInfo.length > 30 ? '...' : '') : 'Unknown Device')}
+                                        </p>
+                                        {session.isCurrent && (
+                                            <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+                                                {t('settings.sessions.current')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        {session.location ? `${session.location} • ` : ''}{session.ipAddress} • {new Date(session.lastActive).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                            {!session.isCurrent && (
+                                <button
+                                    onClick={() => handleRevokeSession(session.id)}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                    title={t('settings.sessions.revoke')}
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+        </section>
+        
+        {/* Login History Section */}
+        <section className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+                    <Check className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('settings.history.title', 'Login History')}</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.history.subtitle', 'Recent login activity')}</p>
+                </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead className="bg-slate-50 dark:bg-slate-900">
+                        <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('settings.history.status', 'Status')}</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('settings.history.device', 'Device')}</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('settings.history.ip', 'IP Address')}</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('settings.history.time', 'Time')}</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                        {historyLoading ? (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">{t('loading')}</td>
+                            </tr>
+                        ) : loginHistory.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-4 text-center text-sm text-slate-500">{t('settings.history.empty', 'No recent history')}</td>
+                            </tr>
+                        ) : (
+                            loginHistory.map((record) => (
+                                <tr key={record.id}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                            record.status === 'SUCCESS' 
+                                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                        }`}>
+                                            {record.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                        <div className="flex items-center gap-2">
+                                            {getDeviceIcon(record)}
+                                            <span className="truncate max-w-[200px]" title={record.deviceInfo}>
+                                                {record.browser && record.operatingSystem 
+                                                    ? `${record.browser} on ${record.operatingSystem}`
+                                                    : (record.deviceInfo ? record.deviceInfo.substring(0, 30) + (record.deviceInfo.length > 30 ? '...' : '') : 'Unknown')}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                        <div>{record.ipAddress}</div>
+                                        {record.location && <div className="text-xs text-slate-400">{record.location}</div>}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                        {new Date(record.loginTime).toLocaleString()}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         {/* Danger Zone */}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/authService';
 import { Plus, MessageSquare, LogOut, BarChart2, Heart, Moon, Sun, Bell, BellOff, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +29,7 @@ const Dashboard = () => {
   const { stats, completions, refetch: refetchStats } = useHabitStats();
   const [showWizard, setShowWizard] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const { user, setUser, logout } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [showIdentityModal, setShowIdentityModal] = useState(false);
   const [gratitude, setGratitude] = useState('');
   const [gratitudeSubmitted, setGratitudeSubmitted] = useState(false);
@@ -118,6 +119,10 @@ const Dashboard = () => {
           toast.error(t('toast_error', { ns: 'gratitude_jar' }));
       }
   };
+
+  const handleLogout = async () => {
+    await authService.logout();
+  };
   
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
@@ -164,7 +169,7 @@ const Dashboard = () => {
                 <span className="hidden sm:inline">{t('nav.settings')}</span>
               </Link>
               <button 
-                onClick={logout} 
+                onClick={handleLogout} 
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
               >
                 <LogOut className="w-4 h-4" />

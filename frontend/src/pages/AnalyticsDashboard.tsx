@@ -6,6 +6,7 @@ import { Award, Flame, Trophy, Footprints, Star, Diamond, Activity, HeartPulse, 
 import api from '../api/axios';
 import type { AdvancedUserStats, Badge, MoodInsight, MoodLog, Page } from '../types';
 import { format, subDays } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 const BadgeIcon = ({ icon, className }: { icon: string, className?: string }) => {
     switch (icon) {
@@ -37,12 +38,12 @@ const MOOD_COLORS: Record<string, string> = {
 };
 
 const MoodInsightCard = ({ insight }: { insight: MoodInsight }) => {
-    const { t } = useTranslation('analytics');
+    const { t } = useTranslation(['analytics', 'translation']);
     return (
         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-indigo-50 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-3">
                 <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider">
-                    {insight.mood}
+                    {t(`mood.types.${insight.mood.toLowerCase()}`, { ns: 'translation', defaultValue: insight.mood })}
                 </div>
                 <span className="text-xs text-gray-400">{insight.logCount} {t('logs')}</span>
             </div>
@@ -69,7 +70,7 @@ const MoodInsightCard = ({ insight }: { insight: MoodInsight }) => {
 };
 
 export const AnalyticsDashboard = () => {
-    const { t } = useTranslation('analytics');
+    const { t, i18n } = useTranslation(['analytics', 'translation']);
     const navigate = useNavigate();
     const [stats, setStats] = useState<AdvancedUserStats | null>(null);
     const [badges, setBadges] = useState<Badge[]>([]);
@@ -196,7 +197,9 @@ export const AnalyticsDashboard = () => {
                             {moodPieData.map((entry) => (
                                 <div key={entry.name} className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: MOOD_COLORS[entry.name] || '#CBD5E1' }}></div>
-                                    <span>{entry.name} ({entry.value})</span>
+                                    <span>
+                                        {t(`mood.types.${entry.name.toLowerCase()}`, { ns: 'translation', defaultValue: entry.name })} ({entry.value})
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -314,8 +317,12 @@ export const AnalyticsDashboard = () => {
                                 <div key={log.id} className="relative pl-6 pb-2 border-l-2 border-indigo-100 dark:border-slate-700 last:border-0">
                                     <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 border-4 border-white dark:border-slate-800"></div>
                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-1">
-                                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{log.moodType}</span>
-                                        <span className="text-xs text-gray-400">{format(new Date(log.createdAt), 'MMM d, h:mm a')}</span>
+                                        <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                                            {t(`mood.types.${log.moodType.toLowerCase()}`, { ns: 'translation', defaultValue: log.moodType })}
+                                        </span>
+                                        <span className="text-xs text-gray-400">
+                                            {format(new Date(log.createdAt), 'MMM d, h:mm a', { locale: i18n.language.startsWith('zh') ? zhCN : undefined })}
+                                        </span>
                                     </div>
                                     {log.note && (
                                         <p className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg mt-1 italic">

@@ -4,9 +4,11 @@ import { useAuthStore } from '../store/authStore';
 import { getCoachMemories } from '../api/coach';
 import type { CoachMemory } from '../api/coach';
 import { Brain, User, Calendar, Lightbulb, Pin } from 'lucide-react';
+import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale';
 
 const CoachMemorySidebar = () => {
-    const { t } = useTranslation('coach');
+    const { t, i18n } = useTranslation('coach');
     const user = useAuthStore((state) => state.user);
     const [memories, setMemories] = useState<CoachMemory[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -119,7 +121,7 @@ const CoachMemorySidebar = () => {
                                     <p className="text-sm text-gray-700 leading-relaxed">{memory.content}</p>
                                     {memory.expiresAt && (
                                         <p className="mt-2 text-[10px] text-gray-400">
-                                            {t('card.memory.expires')} {new Date(memory.expiresAt).toLocaleDateString()}
+                                            {t('card.memory.expires')} {memory.expiresAt ? format(new Date(memory.expiresAt), 'P', { locale: i18n.language.startsWith('zh') ? zhCN : undefined }) : ''}
                                         </p>
                                     )}
                                 </div>
