@@ -1,5 +1,6 @@
 package com.atomichabits.backend.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,8 +14,11 @@ public class RateLimiterService {
     private final Map<String, RequestWindow> requestCounts = new ConcurrentHashMap<>();
     private final Map<String, Instant> blockList = new ConcurrentHashMap<>();
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 10;
-    private static final long BLOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+    @Value("${app.rate-limit.max-requests:10}")
+    private int maxRequestsPerMinute;
+
+    @Value("${app.rate-limit.block-duration-ms:900000}") // 15 minutes default
+    private long blockDurationMs;
 
     public boolean isBlocked(String ipAddress) {
         Instant blockEndTime = blockList.get(ipAddress);
@@ -36,8 +40,8 @@ public class RateLimiterService {
                 return new RequestWindow(now, 1);
             } else {
                 window.count++;
-                if (window.count > MAX_REQUESTS_PER_MINUTE) {
-                    blockList.put(ipAddress, Instant.now().plusMillis(BLOCK_DURATION_MS));
+                if (window.count > maxRequestsPerMinute) {
+                    blockList.put(ipAddress, Instant.now().plusMillis(blockDurationMs));
                 }
                 return window;
             }

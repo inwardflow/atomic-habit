@@ -17,3 +17,7 @@ spring:
 
 agentscope:
   enabled: false # Disable external API calls
+
+app:
+  rate-limit:
+    max-requests: 1000 # Allow many requests in tests without blocking

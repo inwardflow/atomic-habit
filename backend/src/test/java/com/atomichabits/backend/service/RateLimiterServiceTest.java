@@ -1,6 +1,8 @@
 package com.atomichabits.backend.service;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class RateLimiterServiceTest {
@@ -8,6 +10,8 @@ class RateLimiterServiceTest {
     @Test
     void testRateLimiting() {
         RateLimiterService service = new RateLimiterService();
+        ReflectionTestUtils.setField(service, "maxRequestsPerMinute", 10);
+        ReflectionTestUtils.setField(service, "blockDurationMs", 900000L);
         String ip = "127.0.0.1";
 
         // Record 10 requests (allowed)

@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 import java.net.http.HttpResponse;
 import java.util.Map;
@@ -20,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         }
 )
 @ActiveProfiles("test")
+@TestPropertySource(properties = "app.rate-limit.max-requests=10")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class SecurityIntegrationTest {
 
     @LocalServerPort
