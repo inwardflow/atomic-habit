@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:atomichabits-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  security:
+    jwt:
+      secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 # Fixed secret for tests
+      expiration: 900000
+      refresh-expiration-ms: 604800000
+
+agentscope:
+  enabled: false # Disable external API calls
