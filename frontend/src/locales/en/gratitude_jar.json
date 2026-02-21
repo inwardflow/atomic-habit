@@ -1,0 +1,19 @@
+{
+  "title": "The Gratitude Jar",
+  "back_to_dashboard": "Back to Dashboard",
+  "subtitle": "\"When you feel like you have nothing, look inside here. <br/>These are the moments you've collected.\"",
+  "opening_jar": "Opening jar...",
+  "empty_state": "The jar is empty, but your life isn't.<br/>Go add your first memory.",
+  "confirm_delete": "Are you sure you want to delete this memory?",
+  "delete_success": "Memory deleted.",
+  "delete_error": "Could not delete.",
+  "update_success": "Memory updated.",
+  "update_error": "Could not update.",
+  "view_all": "View All",
+  "placeholder": "What's on your mind?",
+  "save": "Save Entry",
+  "edit": "Edit",
+  "toast_updated": "Updated your gratitude journal.",
+  "toast_saved": "Saved. A grateful heart is a magnet for miracles.",
+  "toast_error": "Could not save."
+}

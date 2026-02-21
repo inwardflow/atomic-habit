@@ -1,0 +1,19 @@
+{
+  "step1_title": "Welcome, friend.",
+  "step1_subtitle": "We believe you don't need more willpower. You just need a gentler system.<br/><br/>Let's start with your <strong>identity</strong>. <br/>Not what you want to <em>achieve</em>, but who you want to <em>become</em>.",
+  "step1_instruction": "",
+  "step1_label": "I am a...",
+  "step1_placeholder": "e.g. reader, runner, artist",
+  "step1_button": "Continue",
+  "step1_button_saving": "Saving...",
+  "step2_title": "Just one small thing.",
+  "step2_subtitle": "To be a <strong>{{identity}}</strong>, you don't need to move mountains today.<br/>You just need to cast one small vote for that identity.",
+  "step2_label": "What is the tiniest step you can take?",
+  "step2_placeholder": "e.g. read 1 page, put on shoes",
+  "step2_tip": "Tip: Make it so easy you can't say no. (The 2-Minute Rule)",
+  "step2_button": "Begin My Journey",
+  "step2_button_creating": "Creating...",
+  "error_identity": "Failed to set identity",
+  "success_habit": "You've started your journey.",
+  "error_habit": "Failed to create habit"
+}

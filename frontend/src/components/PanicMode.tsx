@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wind, X, Eye, Ear, Hand, Coffee, Footprints, ArrowRight, Check, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useHabits } from '../hooks/useHabits';
 import type { Habit } from '../types';
@@ -9,8 +10,9 @@ import toast from 'react-hot-toast';
 import { soundEngine } from '../utils/soundEngine';
 
 const PanicMode = () => {
+  const { t } = useTranslation('panic');
   const [isOpen, setIsOpen] = useState(false);
-  const [text, setText] = useState('Inhale');
+  const [text, setText] = useState(t('breathe.inhale'));
   const [mode, setMode] = useState<'breathe' | 'grounding' | 'focus'>('breathe');
   const [groundingStep, setGroundingStep] = useState(0);
   const { habits, completeHabit } = useHabits();
@@ -18,11 +20,11 @@ const PanicMode = () => {
   const [soundEnabled, setSoundEnabled] = useState(false);
 
   const groundingSteps = [
-      { icon: Eye, count: 5, text: "Things you can see", desc: "Look around. Notice 5 details." },
-      { icon: Hand, count: 4, text: "Things you can touch", desc: "Feel the texture of your clothes or desk." },
-      { icon: Ear, count: 3, text: "Things you can hear", desc: "Listen for distant traffic or birds." },
-      { icon: Coffee, count: 2, text: "Things you can smell", desc: "Or favorite scents you remember." },
-      { icon: Footprints, count: 1, text: "Thing you can taste", desc: "Or one emotion you feel right now." },
+      { icon: Eye, count: 5, text: t('grounding.step1.text'), desc: t('grounding.step1.desc') },
+      { icon: Hand, count: 4, text: t('grounding.step2.text'), desc: t('grounding.step2.desc') },
+      { icon: Ear, count: 3, text: t('grounding.step3.text'), desc: t('grounding.step3.desc') },
+      { icon: Coffee, count: 2, text: t('grounding.step4.text'), desc: t('grounding.step4.desc') },
+      { icon: Footprints, count: 1, text: t('grounding.step5.text'), desc: t('grounding.step5.desc') },
   ];
 
   useEffect(() => {
@@ -69,7 +71,7 @@ const PanicMode = () => {
               spread: 100,
               origin: { y: 0.6 }
           });
-          toast.success('You did it! Amazing.', { icon: '🌟' });
+          toast.success(t('focus.success'), { icon: '🌟' });
           setIsOpen(false);
       }
   };
@@ -78,11 +80,11 @@ const PanicMode = () => {
     if (!isOpen || mode !== 'breathe') return;
     
     const cycle = () => {
-      setText('Inhale');
+      setText(t('breathe.inhale'));
       setTimeout(() => {
-        setText('Hold');
+        setText(t('breathe.hold'));
         setTimeout(() => {
-          setText('Exhale');
+          setText(t('breathe.exhale'));
         }, 4000);
       }, 4000);
     };
@@ -90,7 +92,7 @@ const PanicMode = () => {
     cycle();
     const interval = setInterval(cycle, 12000); // 4-4-4 breathing box
     return () => clearInterval(interval);
-  }, [isOpen, mode]);
+  }, [isOpen, mode, t]);
 
   return (
     <>
@@ -102,10 +104,10 @@ const PanicMode = () => {
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
             className="fixed bottom-8 left-8 md:bottom-8 md:left-8 p-3 bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-200 rounded-full shadow-lg hover:bg-sky-200 dark:hover:bg-sky-800 transition-all z-40 flex items-center gap-2 text-sm font-medium hover:scale-105 active:scale-95"
-            title="Feeling overwhelmed?"
+            title={t('button')}
           >
             <Wind className="w-5 h-5" />
-            <span className="hidden md:inline">Overwhelmed?</span>
+            <span className="hidden md:inline">{t('button')}</span>
           </motion.button>
         )}
       </AnimatePresence>
@@ -133,20 +135,20 @@ const PanicMode = () => {
                             onClick={() => setMode('breathe')}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${mode === 'breathe' ? 'bg-sky-200 dark:bg-sky-800 text-sky-800 dark:text-sky-100' : 'text-sky-400 dark:text-sky-500 hover:text-sky-600 dark:hover:text-sky-300'}`}
                         >
-                            Breathe
+                            {t('breathe.mode')}
                         </button>
                         <button 
                             onClick={() => setMode('grounding')}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${mode === 'grounding' ? 'bg-sky-200 dark:bg-sky-800 text-sky-800 dark:text-sky-100' : 'text-sky-400 dark:text-sky-500 hover:text-sky-600 dark:hover:text-sky-300'}`}
                         >
-                            Grounding
+                            {t('grounding.mode')}
                         </button>
                         <button 
                             onClick={toggleSound}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${soundEnabled ? 'bg-sky-200 dark:bg-sky-800 text-sky-800 dark:text-sky-100' : 'text-sky-400 dark:text-sky-500 hover:text-sky-600 dark:hover:text-sky-300'}`}
                         >
                             {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                            {soundEnabled ? 'Rain On' : 'Rain Off'}
+                            {soundEnabled ? t('sound.on') : t('sound.off')}
                         </button>
                     </div>
                 )}
@@ -163,7 +165,7 @@ const PanicMode = () => {
                             animate={{ y: 0, opacity: 1 }}
                             className="text-3xl font-light text-sky-900 dark:text-sky-100 mb-12"
                         >
-                            Just Breathe.
+                            {t('breathe.title')}
                         </motion.h2>
                         
                         <div className="relative w-64 h-64 mx-auto mb-16 flex items-center justify-center">
@@ -208,8 +210,8 @@ const PanicMode = () => {
                         exit={{ opacity: 0, x: -20 }}
                         className="mb-12"
                     >
-                        <h2 className="text-3xl font-light text-sky-900 dark:text-sky-100 mb-2">Find 5 Things.</h2>
-                        <p className="text-sky-600 dark:text-sky-300 mb-10 text-sm">Use your senses to ground yourself.</p>
+                        <h2 className="text-3xl font-light text-sky-900 dark:text-sky-100 mb-2">{t('grounding.title')}</h2>
+                        <p className="text-sky-600 dark:text-sky-300 mb-10 text-sm">{t('grounding.subtitle')}</p>
 
                         <div className="bg-white/50 dark:bg-slate-800/50 rounded-2xl p-8 shadow-sm mb-8 min-h-[200px] flex flex-col items-center justify-center">
                             {(() => {
@@ -245,14 +247,14 @@ const PanicMode = () => {
                                 disabled={groundingStep === 0}
                                 className="px-4 py-2 rounded-lg text-sky-600 dark:text-sky-400 disabled:opacity-30 hover:bg-sky-100 dark:hover:bg-sky-900"
                             >
-                                Previous
+                                {t('grounding.previous')}
                             </button>
                             <button
                                 onClick={() => setGroundingStep(prev => Math.min(groundingSteps.length - 1, prev + 1))}
                                 disabled={groundingStep === groundingSteps.length - 1}
                                 className="px-6 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50"
                             >
-                                Next
+                                {t('grounding.next')}
                             </button>
                         </div>
                     </motion.div>
@@ -263,23 +265,23 @@ const PanicMode = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="mb-12"
                     >
-                        <h2 className="text-3xl font-light text-sky-900 dark:text-sky-100 mb-4">Just One Thing.</h2>
-                        <p className="text-sky-600 dark:text-sky-300 mb-10 text-sm">Forget the rest. Can you do just this?</p>
+                        <h2 className="text-3xl font-light text-sky-900 dark:text-sky-100 mb-4">{t('focus.title')}</h2>
+                        <p className="text-sky-600 dark:text-sky-300 mb-10 text-sm">{t('focus.subtitle')}</p>
                         
                         {focusHabit ? (
                             <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-xl mb-8 border-2 border-sky-100 dark:border-sky-900">
                                 <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">{focusHabit.name}</h3>
                                 {focusHabit.twoMinuteVersion && (
                                     <div className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-4 py-2 rounded-lg inline-block mb-4 font-medium">
-                                        🌱 2-Minute Version: {focusHabit.twoMinuteVersion}
+                                        🌱 {t('focus.twoMinute')}: {focusHabit.twoMinuteVersion}
                                     </div>
                                 )}
-                                <p className="text-slate-500 dark:text-slate-400 italic">"{focusHabit.cueImplementationIntention || 'Just start.'}"</p>
+                                <p className="text-slate-500 dark:text-slate-400 italic">"{focusHabit.cueImplementationIntention || t('focus.start')}"</p>
                             </div>
                         ) : (
                              <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-xl mb-8 border-2 border-sky-100 dark:border-sky-900">
-                                <h3 className="text-xl font-medium text-slate-600 dark:text-slate-300">You're all caught up!</h3>
-                                <p className="text-slate-400 dark:text-slate-500 mt-2">Take a break. You've earned it.</p>
+                                <h3 className="text-xl font-medium text-slate-600 dark:text-slate-300">{t('focus.caughtUp')}</h3>
+                                <p className="text-slate-400 dark:text-slate-500 mt-2">{t('focus.break')}</p>
                             </div>
                         )}
                         
@@ -289,14 +291,14 @@ const PanicMode = () => {
                                 className="bg-green-500 text-white px-8 py-4 rounded-full hover:bg-green-600 transition-all shadow-lg shadow-green-200 dark:shadow-green-900/30 text-lg font-bold flex items-center justify-center gap-2 mx-auto w-full max-w-xs hover:scale-105 active:scale-95"
                             >
                                 <Check className="w-6 h-6" />
-                                I Did It!
+                                {t('focus.didIt')}
                             </button>
                         ) : (
                              <button
                                 onClick={() => setIsOpen(false)}
                                 className="bg-sky-600 text-white px-8 py-3 rounded-full hover:bg-sky-700 transition-colors"
                             >
-                                Close
+                                {t('close')}
                             </button>
                         )}
                     </motion.div>
@@ -310,8 +312,8 @@ const PanicMode = () => {
                             transition={{ delay: 1 }}
                             className="text-sky-800 dark:text-sky-200 text-lg mb-10 font-light leading-relaxed"
                         >
-                            You don't need to do everything right now.<br/>
-                            Just focus on this one moment.
+                            {t('message.text1')}<br/>
+                            {t('message.text2')}
                         </motion.p>
 
                         <motion.button
@@ -321,7 +323,7 @@ const PanicMode = () => {
                             onClick={() => setMode('focus')}
                             className="bg-sky-600 text-white px-8 py-3 rounded-full hover:bg-sky-700 transition-colors shadow-lg shadow-sky-200 dark:shadow-sky-900/30 text-sm font-medium tracking-wide flex items-center justify-center gap-2 mx-auto"
                         >
-                            I'm ready to try one small thing
+                            {t('message.ready')}
                             <ArrowRight className="w-4 h-4" />
                         </motion.button>
                     </>

@@ -1,0 +1,57 @@
+{
+  "button": "Overwhelmed?",
+  "close": "Close",
+  "breathe": {
+    "mode": "Breathe",
+    "title": "Just Breathe.",
+    "inhale": "Inhale",
+    "hold": "Hold",
+    "exhale": "Exhale"
+  },
+  "grounding": {
+    "mode": "Grounding",
+    "title": "Find 5 Things.",
+    "subtitle": "Use your senses to ground yourself.",
+    "previous": "Previous",
+    "next": "Next",
+    "step1": {
+      "text": "Things you can see",
+      "desc": "Look around. Notice 5 details."
+    },
+    "step2": {
+      "text": "Things you can touch",
+      "desc": "Feel the texture of your clothes or desk."
+    },
+    "step3": {
+      "text": "Things you can hear",
+      "desc": "Listen for distant traffic or birds."
+    },
+    "step4": {
+      "text": "Things you can smell",
+      "desc": "Or favorite scents you remember."
+    },
+    "step5": {
+      "text": "Thing you can taste",
+      "desc": "Or one emotion you feel right now."
+    }
+  },
+  "focus": {
+    "title": "Just One Thing.",
+    "subtitle": "Forget the rest. Can you do just this?",
+    "caughtUp": "You're all caught up!",
+    "break": "Take a break. You've earned it.",
+    "didIt": "I Did It!",
+    "success": "You did it! Amazing.",
+    "twoMinute": "2-Minute Version",
+    "start": "Just start."
+  },
+  "message": {
+    "text1": "You don't need to do everything right now.",
+    "text2": "Just focus on this one moment.",
+    "ready": "I'm ready to try one small thing"
+  },
+  "sound": {
+    "on": "Rain On",
+    "off": "Rain Off"
+  }
+}

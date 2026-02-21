@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { Plus, MessageSquare, LogOut, BarChart2, Heart, Moon, Sun, Bell, BellOff, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useHabits } from '../hooks/useHabits';
 import { useGoals } from '../hooks/useGoals';
 import { useHabitStats } from '../hooks/useHabitStats';
@@ -21,6 +22,7 @@ import toast from 'react-hot-toast';
 import PanicMode from '../components/PanicMode';
 
 const Dashboard = () => {
+  const { t } = useTranslation(['translation', 'gratitude_jar']);
   const { habits, completeHabit, uncompleteHabit, fetchHabits, updateHabit, toggleHabitStatus, deleteHabit } = useHabits();
   const { goals, fetchGoals } = useGoals();
   const { stats, completions, refetch: refetchStats } = useHabitStats();
@@ -104,16 +106,16 @@ const Dashboard = () => {
       try {
           if (moodId) {
             await api.put(`/moods/${moodId}`, { note: gratitude });
-            toast.success('Updated your gratitude journal.', { icon: '✨' });
+            toast.success(t('toast_updated', { ns: 'gratitude_jar' }), { icon: '✨' });
           } else {
             const res = await api.post('/moods', { moodType: 'GRATITUDE', note: gratitude });
             setMoodId(res.data.id);
-            toast.success('Saved. A grateful heart is a magnet for miracles.', { icon: '🙏' });
+            toast.success(t('toast_saved', { ns: 'gratitude_jar' }), { icon: '🙏' });
             confetti({ particleCount: 50, spread: 50, origin: { y: 0.8 }, colors: ['#FCD34D', '#F87171'] });
           }
           setGratitudeSubmitted(true);
       } catch {
-          toast.error('Could not save.');
+          toast.error(t('toast_error', { ns: 'gratitude_jar' }));
       }
   };
   
@@ -127,20 +129,20 @@ const Dashboard = () => {
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
                 <span className="text-white font-bold text-lg">A</span>
               </div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Atomic Habits</h1>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{t('app.title')}</h1>
             </div>
             <div className="flex items-center gap-4">
               <button
                 onClick={toggleTheme}
                 className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-                title="Toggle Theme"
+                title={t('settings.preferences.theme')}
               >
                 {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button
                 onClick={toggleNotifications}
                 className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative"
-                title={notificationsEnabled ? 'Disable Notifications' : permission === 'denied' ? 'Notifications Blocked in Browser' : 'Enable Notifications'}
+                title={notificationsEnabled ? t('settings.preferences.notifications') + ': ' + t('settings.preferences.enabled') : permission === 'denied' ? t('settings.preferences.notifications') + ': ' + t('settings.preferences.blocked') : t('settings.preferences.notifications') + ': ' + t('settings.preferences.disabled')}
               >
                 {notificationsEnabled ? <Bell className="w-5 h-5" /> : <BellOff className="w-5 h-5" />}
                 {!notificationsEnabled && permission !== 'denied' && (
@@ -152,21 +154,21 @@ const Dashboard = () => {
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
               >
                 <BarChart2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Analytics</span>
+                <span className="hidden sm:inline">{t('nav.analytics')}</span>
               </Link>
               <Link 
                 to="/settings" 
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
               >
                 <Settings className="w-4 h-4" />
-                <span className="hidden sm:inline">Settings</span>
+                <span className="hidden sm:inline">{t('nav.settings')}</span>
               </Link>
               <button 
                 onClick={logout} 
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
+                <span className="hidden sm:inline">{t('nav.logout')}</span>
               </button>
             </div>
           </div>
@@ -190,10 +192,10 @@ const Dashboard = () => {
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300">
                     <Heart className="w-5 h-5 fill-indigo-100 dark:fill-indigo-900 text-indigo-500" />
-                    <h3 className="font-semibold">One Good Thing</h3>
+                    <h3 className="font-semibold">{t('title', { ns: 'gratitude_jar' })}</h3>
                 </div>
                 <Link to="/gratitude" className="text-xs font-medium text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-300">
-                    View All
+                    {t('view_all', { ns: 'gratitude_jar' })}
                 </Link>
             </div>
             
@@ -203,7 +205,7 @@ const Dashboard = () => {
                         type="text" 
                         value={gratitude}
                         onChange={(e) => setGratitude(e.target.value)}
-                        placeholder="What is one small thing you are grateful for today?"
+                        placeholder={t('placeholder', { ns: 'gratitude_jar' })}
                         className="flex-1 border-0 bg-slate-50 dark:bg-slate-900/50 rounded-lg px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-all"
                         onKeyDown={(e) => e.key === 'Enter' && handleGratitudeSubmit()}
                     />
@@ -212,7 +214,7 @@ const Dashboard = () => {
                         disabled={!gratitude.trim()}
                         className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                     >
-                        Save
+                        {t('save', { ns: 'gratitude_jar' })}
                     </button>
                 </div>
             ) : (
@@ -222,7 +224,7 @@ const Dashboard = () => {
                         onClick={() => { setGratitudeSubmitted(false); }}
                         className="text-xs text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300"
                     >
-                        Edit
+                        {t('edit', { ns: 'gratitude_jar' })}
                     </button>
                 </div>
             )}
@@ -237,15 +239,15 @@ const Dashboard = () => {
         <section>
           <div className="flex justify-between items-end mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Daily Habits</h2>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">Small steps to big results.</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{t('dashboard.sections.habits')}</h2>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.sections.habits_subtitle')}</p>
             </div>
             <button
               onClick={() => setShowWizard(true)}
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-all hover:shadow-md active:scale-95"
             >
               <Plus className="w-4 h-4 mr-2" /> 
-              New Habit
+              {t('dashboard.buttons.new_habit')}
             </button>
           </div>
 
@@ -254,21 +256,21 @@ const Dashboard = () => {
               <div className="mx-auto w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full flex items-center justify-center mb-4">
                 <Plus className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white">No habits yet</h3>
-              <p className="mt-1 text-slate-500 dark:text-slate-400">Get started by creating your first habit.</p>
+              <h3 className="text-lg font-medium text-slate-900 dark:text-white">{t('dashboard.no_habits.title')}</h3>
+              <p className="mt-1 text-slate-500 dark:text-slate-400">{t('dashboard.no_habits.subtitle')}</p>
               <button 
                 onClick={() => setShowWizard(true)} 
                 className="mt-6 text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-500 hover:underline"
               >
-                Create your first habit
+                {t('dashboard.no_habits.cta')}
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[...habits].sort((a, b) => {
                 // Scheduled today first, rest days at the bottom
-                if (a.scheduledToday !== false && b.scheduledToday === false) return -1;
-                if (a.scheduledToday === false && b.scheduledToday !== false) return 1;
+                if (a.scheduledToday && !b.scheduledToday) return -1;
+                if (!a.scheduledToday && b.scheduledToday) return 1;
                 return 0;
               }).map((habit) => (
                 <HabitCard

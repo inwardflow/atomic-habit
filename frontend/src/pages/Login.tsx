@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import { ArrowRight } from 'lucide-react';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const setToken = useAuthStore((state) => state.setToken);
@@ -19,7 +21,7 @@ const Login = () => {
       setToken(response.data.accessToken);
       navigate('/dashboard');
     } catch {
-      alert('Login failed');
+      alert(t('auth.login.failed'));
     } finally {
       setLoading(false);
     }
@@ -29,12 +31,12 @@ const Login = () => {
     <div className="flex min-h-screen flex-col justify-center bg-slate-50 py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
-          Sign in to your account
+          {t('auth.login.title')}
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-          Or{' '}
+          {t('auth.login.subtitle')}{' '}
           <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
-            create a new account
+            {t('auth.login.createAccount')}
           </Link>
         </p>
       </div>
@@ -44,7 +46,7 @@ const Login = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium leading-6 text-slate-900">
-                Email address
+                {t('auth.login.emailLabel')}
               </label>
               <div className="mt-2">
                 <input
@@ -62,7 +64,7 @@ const Login = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium leading-6 text-slate-900">
-                Password
+                {t('auth.login.passwordLabel')}
               </label>
               <div className="mt-2">
                 <input
@@ -84,7 +86,7 @@ const Login = () => {
                 disabled={loading}
                 className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed items-center"
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? t('auth.login.submitting') : t('auth.login.submit')}
                 {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
               </button>
             </div>

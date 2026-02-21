@@ -1,9 +1,12 @@
 server:
-  servlet:
-    async:
-      timeout: ${SERVER_ASYNC_TIMEOUT:300000}
+  # servlet:
+  #   async:
+  #     timeout: ${SERVER_ASYNC_TIMEOUT:300000}
 
 spring:
+  messages:
+    basename: i18n/messages
+    encoding: UTF-8
   application:
     name: atomic-habits-backend
   profiles:
@@ -17,10 +20,11 @@ spring:
     database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
-      default_schema: default_schema
+      # default_schema: default_schema
     show-sql: ${SPRING_JPA_SHOW_SQL:false}
     properties:
       hibernate:
+        default_schema: default_schema
         format_sql: true
   security:
     jwt:

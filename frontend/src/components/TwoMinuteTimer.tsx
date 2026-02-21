@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Pause, Check, Clock, RotateCcw } from 'lucide-react';
 import { soundEngine } from '../utils/soundEngine';
 import confetti from 'canvas-confetti';
+import { useTranslation } from 'react-i18next';
 
 interface TwoMinuteTimerProps {
     habitName: string;
@@ -11,6 +12,7 @@ interface TwoMinuteTimerProps {
 }
 
 const TwoMinuteTimer: React.FC<TwoMinuteTimerProps> = ({ habitName, onClose, onComplete }) => {
+    const { t } = useTranslation('timer');
     const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
     const [isActive, setIsActive] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
@@ -79,9 +81,9 @@ const TwoMinuteTimer: React.FC<TwoMinuteTimerProps> = ({ habitName, onClose, onC
                         <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full mb-4">
                             <Clock size={24} />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">2-Minute Rule</h2>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{t('title')}</h2>
                         <p className="text-slate-500 dark:text-slate-400 text-sm">
-                            "Make it easy. Start by doing just two minutes of {habitName}."
+                            {t('subtitle', { habitName })}
                         </p>
                     </div>
 
@@ -115,7 +117,7 @@ const TwoMinuteTimer: React.FC<TwoMinuteTimerProps> = ({ habitName, onClose, onC
                                 <span className={`text-5xl font-mono font-bold ${isFinished ? 'text-green-500' : 'text-slate-800 dark:text-white'}`}>
                                     {formatTime(timeLeft)}
                                 </span>
-                                {isActive && <span className="text-xs text-indigo-500 animate-pulse mt-2">Focusing...</span>}
+                                {isActive && <span className="text-xs text-indigo-500 animate-pulse mt-2">{t('focusing')}</span>}
                             </div>
                         </div>
                     </div>
@@ -131,12 +133,12 @@ const TwoMinuteTimer: React.FC<TwoMinuteTimerProps> = ({ habitName, onClose, onC
                                         : 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/30'
                                     }`}
                                 >
-                                    {isActive ? <><Pause size={20} /> Pause</> : <><Play size={20} /> Start</>}
+                                    {isActive ? <><Pause size={20} /> {t('pause')}</> : <><Play size={20} /> {t('start')}</>}
                                 </button>
                                 <button
                                     onClick={resetTimer}
                                     className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                    title="Reset"
+                                    title={t('reset')}
                                 >
                                     <RotateCcw size={20} />
                                 </button>
@@ -146,7 +148,7 @@ const TwoMinuteTimer: React.FC<TwoMinuteTimerProps> = ({ habitName, onClose, onC
                                 onClick={onComplete}
                                 className="flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/30 transition-all transform hover:scale-105 active:scale-95 animate-bounce"
                             >
-                                <Check size={20} /> Mark as Done
+                                <Check size={20} /> {t('mark_done')}
                             </button>
                         )}
                     </div>

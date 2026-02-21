@@ -4,6 +4,7 @@ import { Heart, ArrowLeft, Quote, Sparkles, Trash2, Edit2, X, Check } from 'luci
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface MoodLog {
     id: number;
@@ -13,6 +14,7 @@ interface MoodLog {
 }
 
 const GratitudeJar = () => {
+    const { t } = useTranslation('gratitude_jar');
     const [logs, setLogs] = useState<MoodLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -26,13 +28,13 @@ const GratitudeJar = () => {
     }, []);
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm('Are you sure you want to delete this memory?')) return;
+        if (!window.confirm(t('confirm_delete'))) return;
         try {
             await api.delete(`/moods/${id}`);
             setLogs(logs.filter(log => log.id !== id));
-            toast.success('Memory deleted.');
+            toast.success(t('delete_success'));
         } catch {
-            toast.error('Could not delete.');
+            toast.error(t('delete_error'));
         }
     };
 
@@ -52,9 +54,9 @@ const GratitudeJar = () => {
             await api.put(`/moods/${id}`, { note: editContent });
             setLogs(logs.map(log => log.id === id ? { ...log, note: editContent } : log));
             setEditingId(null);
-            toast.success('Memory updated.');
+            toast.success(t('update_success'));
         } catch {
-            toast.error('Could not update.');
+            toast.error(t('update_error'));
         }
     };
 
@@ -62,26 +64,23 @@ const GratitudeJar = () => {
         <div className="min-h-screen bg-amber-50 dark:bg-slate-900 transition-colors duration-500">
             <div className="max-w-4xl mx-auto px-4 py-8">
                 <Link to="/dashboard" className="inline-flex items-center text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 mb-8 transition-colors">
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+                    <ArrowLeft className="w-4 h-4 mr-2" /> {t('back_to_dashboard')}
                 </Link>
 
                 <div className="text-center mb-16">
                     <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-6 text-amber-600 dark:text-amber-400 shadow-xl shadow-amber-100 dark:shadow-none">
                         <Heart className="w-10 h-10 fill-amber-200 dark:fill-amber-800" />
                     </div>
-                    <h1 className="text-4xl font-serif font-bold text-amber-900 dark:text-amber-100 mb-4">The Gratitude Jar</h1>
-                    <p className="text-amber-700 dark:text-amber-300/80 max-w-lg mx-auto leading-relaxed">
-                        "When you feel like you have nothing, look inside here. <br/>
-                        These are the moments you've collected."
-                    </p>
+                    <h1 className="text-4xl font-serif font-bold text-amber-900 dark:text-amber-100 mb-4">{t('title')}</h1>
+                    <p className="text-amber-700 dark:text-amber-300/80 max-w-lg mx-auto leading-relaxed" dangerouslySetInnerHTML={{ __html: t('subtitle') }}></p>
                 </div>
 
                 {loading ? (
-                    <div className="text-center text-amber-400">Opening jar...</div>
+                    <div className="text-center text-amber-400">{t('opening_jar')}</div>
                 ) : logs.length === 0 ? (
                     <div className="text-center py-20 border-2 border-dashed border-amber-200 dark:border-amber-900/50 rounded-3xl">
                         <Sparkles className="w-12 h-12 text-amber-300 mx-auto mb-4" />
-                        <p className="text-amber-600 dark:text-amber-400">The jar is empty, but your life isn't.<br/>Go add your first memory.</p>
+                        <p className="text-amber-600 dark:text-amber-400" dangerouslySetInnerHTML={{ __html: t('empty_state') }}></p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 masonry-grid">
