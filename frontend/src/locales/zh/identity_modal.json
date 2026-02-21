@@ -1,0 +1,19 @@
+{
+  "step1_title": "欢迎你，朋友。",
+  "step1_subtitle": "我们相信你不需要更多的意志力。你只需要一个更温和的系统。<br/><br/>让我们从你的<strong>身份</strong>开始。<br/>不是你想<em>达成</em>什么，而是你想<em>成为</em>谁。",
+  "step1_instruction": "",
+  "step1_label": "我是一个...",
+  "step1_placeholder": "例如：阅读者，跑者，艺术家",
+  "step1_button": "继续",
+  "step1_button_saving": "保存中...",
+  "step2_title": "只需一件小事。",
+  "step2_subtitle": "要成为一名 <strong>{{identity}}</strong>，你今天不需要移山填海。<br/>你只需要为那个身份投下神圣的一票。",
+  "step2_label": "你能采取的最小步骤是什么？",
+  "step2_placeholder": "例如：读1页书，穿上跑鞋",
+  "step2_tip": "提示：让它简单到你无法拒绝。（2分钟规则）",
+  "step2_button": "开启我的旅程",
+  "step2_button_creating": "创建中...",
+  "error_identity": "设置身份失败",
+  "success_habit": "你已经开始了你的旅程。",
+  "error_habit": "创建习惯失败"
+}

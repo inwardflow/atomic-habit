@@ -7,7 +7,8 @@ import com.atomichabits.backend.model.User;
 import com.atomichabits.backend.repository.UserRepository;
 import com.atomichabits.backend.security.JwtTokenProvider;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,13 +27,15 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final MessageSource messageSource;
 
     public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository,
-                          PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider) {
+                          PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider, MessageSource messageSource) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
+        this.messageSource = messageSource;
     }
 
     @PostMapping("/login")
@@ -52,7 +55,8 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
         if (userRepository.existsByEmail(registerRequest.getEmail())) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Email is already taken."));
+            String message = messageSource.getMessage("auth.email.taken", null, "Email is already taken.", LocaleContextHolder.getLocale());
+            return ResponseEntity.badRequest().body(Map.of("error", message));
         }
 
         User user = User.builder()
@@ -63,6 +67,7 @@ public class AuthController {
 
         userRepository.save(user);
 
-        return ResponseEntity.ok(Map.of("message", "User registered successfully."));
+        String message = messageSource.getMessage("auth.register.success", null, "User registered successfully.", LocaleContextHolder.getLocale());
+        return ResponseEntity.ok(Map.of("message", message));
     }
 }

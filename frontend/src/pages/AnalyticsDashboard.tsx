@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 import { Award, Flame, Trophy, Footprints, Star, Diamond, Activity, HeartPulse, History, ChevronDown, ArrowLeft, Sun, Moon, Calendar, Zap, TrendingUp, Sunrise } from 'lucide-react';
 import api from '../api/axios';
@@ -36,23 +37,24 @@ const MOOD_COLORS: Record<string, string> = {
 };
 
 const MoodInsightCard = ({ insight }: { insight: MoodInsight }) => {
+    const { t } = useTranslation('analytics');
     return (
         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-indigo-50 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
             <div className="flex justify-between items-start mb-3">
                 <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold uppercase tracking-wider">
                     {insight.mood}
                 </div>
-                <span className="text-xs text-gray-400">{insight.logCount} logs</span>
+                <span className="text-xs text-gray-400">{insight.logCount} {t('logs')}</span>
             </div>
             
             <div className="mb-4">
                 <div className="text-2xl font-bold text-gray-800 dark:text-gray-100">{insight.avgCompletions.toFixed(1)}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Avg. Habits / Day</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('avg_habits_per_day')}</div>
             </div>
             
             {insight.topHabits && insight.topHabits.length > 0 && (
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-3">
-                    <div className="text-xs text-gray-400 mb-2 uppercase font-medium">Top Habits</div>
+                    <div className="text-xs text-gray-400 mb-2 uppercase font-medium">{t('top_habits')}</div>
                     <div className="flex flex-wrap gap-2">
                         {insight.topHabits.map((habit, idx) => (
                             <span key={idx} className="text-xs bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded border border-gray-100 dark:border-slate-600">
@@ -67,6 +69,7 @@ const MoodInsightCard = ({ insight }: { insight: MoodInsight }) => {
 };
 
 export const AnalyticsDashboard = () => {
+    const { t } = useTranslation('analytics');
     const navigate = useNavigate();
     const [stats, setStats] = useState<AdvancedUserStats | null>(null);
     const [badges, setBadges] = useState<Badge[]>([]);
@@ -107,8 +110,8 @@ export const AnalyticsDashboard = () => {
             .finally(() => setLoadingMoods(false));
     }, [moodPage]);
 
-    if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading analytics...</div>;
-    if (!stats) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">No data available</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('loading_analytics')}</div>;
+    if (!stats) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">{t('no_data')}</div>;
 
     const habitData = Object.entries(stats.completionsByHabit).map(([name, count]) => ({ name, count }));
 
@@ -131,7 +134,7 @@ export const AnalyticsDashboard = () => {
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <Activity className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Journey Insights</h1>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('title')}</h1>
             </div>
             
             {/* Mood & Productivity Correlation */}
@@ -141,7 +144,7 @@ export const AnalyticsDashboard = () => {
                     
                     <div className="flex items-center gap-2 mb-6 relative z-10">
                         <HeartPulse className="w-6 h-6 text-pink-300" />
-                        <h2 className="text-xl font-bold">Mood & Habit Correlation</h2>
+                        <h2 className="text-xl font-bold">{t('mood_habit_correlation')}</h2>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
@@ -150,7 +153,7 @@ export const AnalyticsDashboard = () => {
                         ))}
                     </div>
                     <p className="mt-6 text-sm text-indigo-200 italic relative z-10">
-                        "Understanding your patterns is the first step to mastering them."
+                        "{t('quote')}"
                     </p>
                 </div>
             )}
@@ -160,7 +163,7 @@ export const AnalyticsDashboard = () => {
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 transition-colors duration-300">
                     <div className="flex items-center gap-2 mb-6">
                         <Sun className="w-5 h-5 text-orange-400" />
-                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Moods (Last 7 Days)</h2>
+                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{t('moods_last_7_days')}</h2>
                     </div>
                     <div className="h-72 flex items-center justify-center">
                         {moodPieData.length > 0 ? (
@@ -185,7 +188,7 @@ export const AnalyticsDashboard = () => {
                                 </PieChart>
                             </ResponsiveContainer>
                         ) : (
-                            <p className="text-gray-400 text-sm">No mood data for the last 7 days.</p>
+                            <p className="text-gray-400 text-sm">{t('no_mood_data')}</p>
                         )}
                     </div>
                      {moodPieData.length > 0 && (
@@ -202,7 +205,7 @@ export const AnalyticsDashboard = () => {
 
                 {/* Daily Activity Chart */}
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 transition-colors duration-300">
-                    <h2 className="text-lg font-semibold mb-6 text-gray-700 dark:text-gray-200">Consistency Rhythm (30 Days)</h2>
+                    <h2 className="text-lg font-semibold mb-6 text-gray-700 dark:text-gray-200">{t('consistency_rhythm')}</h2>
                     <div className="h-72">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={stats.last30Days}>
@@ -238,7 +241,7 @@ export const AnalyticsDashboard = () => {
 
                 {/* Habit Breakdown Chart */}
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 transition-colors duration-300">
-                    <h2 className="text-lg font-semibold mb-6 text-gray-700 dark:text-gray-200">Habit Strength</h2>
+                    <h2 className="text-lg font-semibold mb-6 text-gray-700 dark:text-gray-200">{t('habit_strength')}</h2>
                     <div className="h-72">
                          <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={habitData} layout="vertical" margin={{left: 20}}>
@@ -274,11 +277,11 @@ export const AnalyticsDashboard = () => {
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 transition-colors duration-300">
                     <div className="flex items-center gap-2 mb-6">
                         <Award className="w-6 h-6 text-yellow-500" />
-                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Milestones & Memories</h2>
+                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{t('milestones_memories')}</h2>
                     </div>
                     
                     {badges.length === 0 ? (
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Your journey has just begun. Milestones will appear here.</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{t('no_milestones')}</p>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             {badges.map(badge => (
@@ -300,12 +303,12 @@ export const AnalyticsDashboard = () => {
                 <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 transition-colors duration-300 flex flex-col">
                     <div className="flex items-center gap-2 mb-6">
                         <History className="w-6 h-6 text-blue-500" />
-                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">Emotional Journey</h2>
+                        <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-200">{t('emotional_journey')}</h2>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 space-y-4">
                         {moodHistory.length === 0 ? (
-                            <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">No mood logs yet.</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-8">{t('no_mood_logs')}</p>
                         ) : (
                             moodHistory.map((log) => (
                                 <div key={log.id} className="relative pl-6 pb-2 border-l-2 border-indigo-100 dark:border-slate-700 last:border-0">
@@ -329,7 +332,7 @@ export const AnalyticsDashboard = () => {
                                 disabled={loadingMoods}
                                 className="w-full py-2 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 rounded transition-colors flex items-center justify-center gap-1"
                             >
-                                {loadingMoods ? 'Loading...' : <>Load More <ChevronDown size={14} /></>}
+                                {loadingMoods ? t('loading') : <>{t('load_more')} <ChevronDown size={14} /></>}
                             </button>
                         )}
                     </div>

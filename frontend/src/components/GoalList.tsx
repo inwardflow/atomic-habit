@@ -1,13 +1,15 @@
 import React from 'react';
 import { User } from 'lucide-react';
 import clsx from 'clsx';
-import type { Goal } from '../types/index';
+import type { Goal } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface GoalListProps {
   goals: Goal[];
 }
 
 const GoalList: React.FC<GoalListProps> = ({ goals }) => {
+  const { t } = useTranslation();
   if (goals.length === 0) {
     return null;
   }
@@ -16,8 +18,8 @@ const GoalList: React.FC<GoalListProps> = ({ goals }) => {
     <div className="mb-12">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">My Identity Journeys</h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Focus on who you are becoming, not just what you want to achieve.</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{t('dashboard.sections.identity')}</h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.sections.identity_subtitle')}</p>
         </div>
       </div>
       
@@ -41,7 +43,7 @@ const GoalList: React.FC<GoalListProps> = ({ goals }) => {
                         ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/30" 
                         : "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/30"
                     )}>
-                      {goal.status}
+                      {t(`goal_list.status.${goal.status.toLowerCase()}`, goal.status)}
                     </span>
                   </div>
 
@@ -49,7 +51,7 @@ const GoalList: React.FC<GoalListProps> = ({ goals }) => {
                   <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 italic border-l-2 border-indigo-100 dark:border-indigo-900/50 pl-3">"{goal.description}"</p>
                   
                   <div className="mt-auto">
-                    <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Your Daily System</h4>
+                    <h4 className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">{t('goal_list.system_label')}</h4>
                     <ul className="space-y-3">
                       {goal.habits && goal.habits.slice(0, 3).map(habit => (
                         <li key={habit.id} className="text-sm text-slate-700 dark:text-slate-300 flex items-start">
@@ -63,7 +65,7 @@ const GoalList: React.FC<GoalListProps> = ({ goals }) => {
                         </li>
                       ))}
                       {goal.habits && goal.habits.length > 3 && (
-                        <li className="text-xs text-slate-400 dark:text-slate-500 italic pl-4">+ {goal.habits.length - 3} more habits</li>
+                        <li className="text-xs text-slate-400 dark:text-slate-500 italic pl-4">{t('goal_list.more_habits', { count: goal.habits.length - 3 })}</li>
                       )}
                     </ul>
                   </div>
@@ -71,9 +73,9 @@ const GoalList: React.FC<GoalListProps> = ({ goals }) => {
                 
                 {/* Footer with minimal deadline emphasis */}
                 <div className="bg-slate-50 dark:bg-slate-900/50 px-6 py-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
-                    <span className="font-medium text-indigo-400">Active Journey</span>
+                    <span className="font-medium text-indigo-400">{t('goal_list.active_journey')}</span>
                     <div className="flex items-center">
-                         <span>Target: {goal.endDate || 'Ongoing'}</span>
+                         <span>{goal.endDate ? t('goal_list.target', { date: goal.endDate }) : t('goal_list.ongoing')}</span>
                     </div>
                 </div>
               </div>

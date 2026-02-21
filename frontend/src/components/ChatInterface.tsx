@@ -14,14 +14,9 @@ import { useGoals } from '../hooks/useGoals';
 import { useHabits } from '../hooks/useHabits';
 import { useAuthStore } from '../store/authStore';
 import type { GoalRequest, HabitRequest } from '../types';
+import { useTranslation } from 'react-i18next';
 
 const AGENT_RUN_URL = `${BACKEND_URL}/agui/run`;
-
-const STARTER_PROMPTS = [
-  'I feel a bit overwhelmed. Walk me through 3 tiny first steps.',
-  'Ask me 3 questions and help me find my first 2-minute habit.',
-  'Give me one smallest action I can do right now.',
-];
 
 interface ChatInterfaceProps {
   onClose: () => void;
@@ -157,23 +152,16 @@ const getLastAssistantContent = (messages: Message[]): string => {
 };
 
 const getLastAssistantSignature = (messages: Message[]): string => {
-  const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as unknown as AgentMessageShape).role));
-  if (!lastAssistant) return '';
-  const shape = lastAssistant as unknown as AgentMessageShape;
-  const id = typeof shape.id === 'string' ? shape.id : '';
-  const content = buildRenderableContent(shape).trim();
-  return `${id}::${content}`;
-};
+    const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole((msg as unknown as AgentMessageShape).role));
+    if (!lastAssistant) return '';
+    const shape = lastAssistant as unknown as AgentMessageShape;
+    const id = typeof shape.id === 'string' ? shape.id : '';
+    const content = buildRenderableContent(shape).trim();
+    return `${id}::${content}`;
+  };
 
-const toUserFacingAgentError = (errorText: string): string => {
-  const normalized = errorText.toLowerCase();
-  if (normalized.includes('invalid token') || normalized.includes('401')) {
-    return 'AI service token is invalid on backend. Please configure a valid AGENTSCOPE_MODEL_API_KEY.';
-  }
-  return `AG-UI error: ${errorText}`;
-};
 
-const extractAssistantFromMessagesArray = (candidate: unknown): string | null => {
+  const extractAssistantFromMessagesArray = (candidate: unknown): string | null => {
   if (!Array.isArray(candidate)) return null;
 
   for (let i = candidate.length - 1; i >= 0; i -= 1) {
@@ -275,7 +263,7 @@ const parseDisplayContent = (
   // without wrapping in a fenced code block.
   if (replies.length === 0) {
     displayContent = displayContent.replace(
-      /^\s*replies\s+(\[.*\])\s*$/gim,
+      /^\s*replies\s+(\[.*])\s*$/gim,
       (_match, jsonPart) => {
         const parsed = tryParseJson(jsonPart);
         if (isStringArray(parsed)) {
@@ -308,10 +296,14 @@ const parseDisplayContent = (
 };
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, onIdentityUpdated }) => {
+  const { t } = useTranslation('coach');
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [recentMoods, setRecentMoods] = useState<MoodItem[]>([]);
+
+  const promptsData = t('starter.prompts', { returnObjects: true });
+  const STARTER_PROMPTS = Array.isArray(promptsData) ? promptsData as string[] : [];
 
   const { addHabits } = useHabits();
   const { createGoal } = useGoals();
@@ -322,6 +314,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedActionsRef = useRef<Set<string>>(new Set());
   const handledRunErrorSignaturesRef = useRef<Set<string>>(new Set());
+
+  const toUserFacingAgentError = useCallback((errorText: string): string => {
+    const normalized = errorText.toLowerCase();
+    if (normalized.includes('invalid token') || normalized.includes('401')) {
+      return t('errors.token');
+    }
+    return t('errors.agui', { error: errorText });
+  }, [t]);
 
   // Agent activity tracking
   const { activity, processEvent, markRunStart, markRunError, reset: resetActivity } = useAgentActivity();
@@ -401,7 +401,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           role: 'assistant',
           content: toUserFacingAgentError(errorText),
         } as Message);
-        toast.error('AG-UI returned an error from backend.');
+        toast.error(t('errors.backend_error'));
       },
       onRunErrorEvent: ({ event }) => {
         const evtRecord = event as unknown as Record<string, unknown>;
@@ -418,7 +418,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           role: 'assistant',
           content: toUserFacingAgentError(errorText),
         } as Message);
-        toast.error('Agent run failed.');
+        toast.error(t('errors.run_failed'));
       },
     });
 
@@ -427,7 +427,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       agentRef.current = null;
       resetActivity();
     };
-  }, [handleRefreshAction, processEvent, resetActivity, token, user]);
+  }, [handleRefreshAction, processEvent, resetActivity, token, user, toUserFacingAgentError, t]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -484,9 +484,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   );
 
   const handleWeeklyReview = useCallback(() => {
-    void sendMessage('Start Weekly Review');
-    toast('Starting Weekly Review...');
-  }, [sendMessage]);
+    void sendMessage(t('actions.start_weekly_review'));
+    toast(t('actions.starting_weekly_review'));
+  }, [sendMessage, t]);
 
   const handleAddPlan = useCallback(
     async (plan: PlanPayload) => {
@@ -504,10 +504,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         await createGoal(goalRequest);
       }
 
-      toast.success('Challenge accepted! Good luck!');
+      toast.success(t('success.challenge_accepted'));
       onHabitsAdded?.();
     },
-    [addHabits, createGoal, onHabitsAdded]
+    [addHabits, createGoal, onHabitsAdded, t]
   );
 
   const handleStartSmall = useCallback(
@@ -522,10 +522,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       };
 
       await addHabits([starterHabit]);
-      toast.success('Great choice! Focusing on one small step is the key.');
+      toast.success(t('success.great_choice'));
       onHabitsAdded?.();
     },
-    [addHabits, onHabitsAdded]
+    [addHabits, onHabitsAdded, t]
   );
 
   const renderReplies = useCallback(
@@ -570,7 +570,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       const textAfter =
         planIndex >= 0 ? displayContent.slice(planIndex + planBlock.length).trim() : '';
       const habits = Array.isArray(plan) ? plan : plan.habits;
-      const planTitle = Array.isArray(plan) ? 'Suggested Plan' : `Plan: ${plan.goalName}`;
+      const planTitle = Array.isArray(plan) ? t('plan.suggested_plan') : t('plan.plan_prefix', { name: plan.goalName });
       const planDescription = Array.isArray(plan) ? '' : (plan.description ?? '');
 
       return (
@@ -596,7 +596,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
                       <strong className="block text-gray-800">{habit.name}</strong>
                       {habit.twoMinuteVersion && (
                         <div className="mt-0.5 w-fit rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-600">
-                          2-Min Rule: {habit.twoMinuteVersion}
+                          {t('plan.two_min_rule')} {habit.twoMinuteVersion}
                         </div>
                       )}
                       {habit.cueImplementationIntention && (
@@ -616,14 +616,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
                 className="flex w-full items-center justify-center rounded-md bg-green-600 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-green-700"
               >
                 <Zap size={14} className="mr-1" />
-                Start Small (Recommended)
+                {t('plan.start_small_recommended')}
               </button>
               <button
                 onClick={() => void handleAddPlan(plan)}
                 className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white py-2 text-xs text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
               >
                 <Layers size={14} className="mr-1" />
-                {Array.isArray(plan) ? 'Add All (Challenge Mode)' : 'Add Full Plan (Challenge Mode)'}
+                {Array.isArray(plan) ? t('plan.add_all_challenge') : t('plan.add_full_plan')}
               </button>
             </div>
           </div>
@@ -636,7 +636,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         </div>
       );
     },
-    [handleAddPlan, handleStartSmall, renderReplies]
+    [handleAddPlan, handleStartSmall, renderReplies, t]
   );
 
   const shouldShowStarterGuide = useMemo(
@@ -649,13 +649,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       <div className="flex shrink-0 items-center justify-between border-b bg-indigo-600 p-4 text-white">
         <h3 className="flex items-center gap-2 font-bold">
           <Zap size={18} />
-          AI Coach
+          {t('title')}
         </h3>
         <div className="flex items-center gap-2">
           <button
             onClick={handleWeeklyReview}
             className="rounded p-1 text-indigo-100 transition-colors hover:bg-indigo-700 hover:text-white"
-            title="Start Weekly Review"
+            title={t('actions.start_weekly_review')}
           >
             <Calendar size={18} />
           </button>
@@ -667,7 +667,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
 
       {recentMoods.length > 0 && (
         <div className="flex shrink-0 items-center gap-2 border-b border-indigo-100 bg-indigo-50 px-4 py-2 text-xs text-indigo-800">
-          <span className="font-semibold">Context:</span>
+          <span className="font-semibold">{t('memory.context')}</span>
           <div className="no-scrollbar flex gap-1 overflow-x-auto">
             {recentMoods.slice(0, 3).map((mood, index) => (
               <span
@@ -685,7 +685,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
         {shouldShowStarterGuide && (
           <div className="rounded-lg border border-indigo-100 bg-gradient-to-r from-indigo-50 to-blue-50 p-3">
-            <h4 className="text-xs font-semibold text-indigo-800">Need a starting point? Pick one:</h4>
+            <h4 className="text-xs font-semibold text-indigo-800">{t('starter.need_starting_point')}</h4>
             <div className="mt-2 flex flex-wrap gap-2">
               {STARTER_PROMPTS.map((prompt) => (
                 <button
@@ -742,7 +742,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
             }
           }}
           disabled={loading}
-          placeholder={loading ? 'Coach is thinking...' : (shouldShowStarterGuide ? 'For example: where should I start?' : 'Ask a question...')}
+          placeholder={loading ? t('thinking') : (shouldShowStarterGuide ? t('starter.example_placeholder') : t('placeholder'))}
         />
         <button
           onClick={() => void sendMessage()}

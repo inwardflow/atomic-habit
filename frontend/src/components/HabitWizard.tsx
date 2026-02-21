@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../api/axios';
 import type { HabitRequest } from '../types';
 import toast from 'react-hot-toast';
@@ -9,17 +10,8 @@ interface HabitWizardProps {
   onSuccess: () => void;
 }
 
-const DAYS = [
-  { key: 'MONDAY', label: 'Mon' },
-  { key: 'TUESDAY', label: 'Tue' },
-  { key: 'WEDNESDAY', label: 'Wed' },
-  { key: 'THURSDAY', label: 'Thu' },
-  { key: 'FRIDAY', label: 'Fri' },
-  { key: 'SATURDAY', label: 'Sat' },
-  { key: 'SUNDAY', label: 'Sun' },
-];
-
 const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation('habits');
   const [step, setStep] = useState(1);
   const [data, setData] = useState<HabitRequest>({
     name: '',
@@ -31,6 +23,16 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
   const [isDaily, setIsDaily] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  const DAYS = [
+    { key: 'MONDAY', label: t('days.MONDAY') },
+    { key: 'TUESDAY', label: t('days.TUESDAY') },
+    { key: 'WEDNESDAY', label: t('days.WEDNESDAY') },
+    { key: 'THURSDAY', label: t('days.THURSDAY') },
+    { key: 'FRIDAY', label: t('days.FRIDAY') },
+    { key: 'SATURDAY', label: t('days.SATURDAY') },
+    { key: 'SUNDAY', label: t('days.SUNDAY') },
+  ];
+
   const toggleDay = (day: string) => {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
@@ -39,7 +41,7 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
 
   const handleSubmit = async () => {
     if (!data.name) {
-        toast.error('Habit name is required');
+        toast.error(t('wizard.toast.name_required'));
         return;
     }
     setLoading(true);
@@ -49,12 +51,12 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
         frequency: isDaily ? undefined : selectedDays.length > 0 ? selectedDays : undefined,
       };
       await api.post('/habits', payload);
-      toast.success('Habit created successfully!');
+      toast.success(t('wizard.toast.success'));
       onSuccess();
       onClose();
     } catch (error) {
       console.error(error);
-      toast.error('Failed to create habit');
+      toast.error(t('wizard.toast.failed'));
     } finally {
       setLoading(false);
     }
@@ -65,20 +67,20 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 bg-gray-600/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-slate-800 p-6 rounded-lg w-full max-w-md shadow-xl dark:shadow-black/50 transition-colors duration-300">
-        <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Create New Habit (Step {step}/{totalSteps})</h3>
+        <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">{t('wizard.title', { step, total: totalSteps })}</h3>
         
         {step === 1 && (
           <div>
-            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">Habit Name</label>
+            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">{t('wizard.step1.label')}</label>
             <input
               className="w-full border dark:border-slate-700 p-2 rounded mb-4 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               value={data.name}
               onChange={(e) => setData({ ...data, name: e.target.value })}
-              placeholder="e.g. Read 1 page"
+              placeholder={t('wizard.step1.placeholder')}
               autoFocus
             />
             <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg mb-4 text-xs text-indigo-800 dark:text-indigo-300 italic">
-               "The secret to getting results that last is to never stop making improvements."
+               {t('wizard.step1.quote')}
             </div>
             <div className="flex flex-col gap-2">
                 <button 
@@ -86,14 +88,14 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
                     className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 w-full font-medium"
                     disabled={!data.name}
                 >
-                    Continue to Plan (Recommended)
+                    {t('wizard.step1.continue')}
                 </button>
                 <button 
                     onClick={handleSubmit} 
                     className="text-gray-500 dark:text-slate-400 text-sm py-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-full"
                     disabled={!data.name || loading}
                 >
-                    {loading ? 'Creating...' : 'Quick Add (Skip Planning)'}
+                    {loading ? t('wizard.step1.creating') : t('wizard.step1.quick_add')}
                 </button>
             </div>
           </div>
@@ -101,71 +103,71 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
         
         {step === 2 && (
           <div>
-            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">Make it Easy (2-Minute Version)</label>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">Scale it down to just 2 minutes.</p>
+            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">{t('wizard.step2.label')}</label>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">{t('wizard.step2.subtitle')}</p>
             <input
               className="w-full border dark:border-slate-700 p-2 rounded mb-4 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
               value={data.twoMinuteVersion}
               onChange={(e) => setData({ ...data, twoMinuteVersion: e.target.value })}
-              placeholder="e.g. Open the book"
+              placeholder={t('wizard.step2.placeholder')}
               autoFocus
             />
              <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg mb-4 text-xs text-indigo-800 dark:text-indigo-300 italic">
-               "A new habit should not feel like a challenge. The actions that follow can be challenging, but the first two minutes should be easy."
+               {t('wizard.step2.quote')}
             </div>
             <div className="flex gap-2">
-                <button onClick={() => setStep(1)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Back</button>
-                <button onClick={() => setStep(3)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">Next</button>
+                <button onClick={() => setStep(1)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">{t('wizard.back')}</button>
+                <button onClick={() => setStep(3)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">{t('wizard.next')}</button>
             </div>
           </div>
         )}
         
         {step === 3 && (
           <div>
-            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">Make it Obvious (Implementation Intention)</label>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">I will [BEHAVIOR] at [TIME] in [LOCATION].</p>
+            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">{t('wizard.step3.label')}</label>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">{t('wizard.step3.subtitle')}</p>
             <input
               className="w-full border dark:border-slate-700 p-2 rounded mb-4 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              placeholder="I will read at 8pm in my bedroom"
+              placeholder={t('wizard.step3.placeholder')}
               value={data.cueImplementationIntention}
               onChange={(e) => setData({ ...data, cueImplementationIntention: e.target.value })}
               autoFocus
             />
              <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg mb-4 text-xs text-indigo-800 dark:text-indigo-300 italic">
-               "Many people think they lack motivation when what they really lack is clarity."
+               {t('wizard.step3.quote')}
             </div>
              <div className="flex gap-2">
-                <button onClick={() => setStep(2)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Back</button>
-                <button onClick={() => setStep(4)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">Next</button>
+                <button onClick={() => setStep(2)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">{t('wizard.back')}</button>
+                <button onClick={() => setStep(4)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">{t('wizard.next')}</button>
             </div>
           </div>
         )}
         
         {step === 4 && (
           <div>
-            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">Make it Obvious (Habit Stacking)</label>
-             <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">After I [CURRENT HABIT], I will [NEW HABIT].</p>
+            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">{t('wizard.step4.label')}</label>
+             <p className="text-sm text-gray-500 dark:text-slate-400 mb-2">{t('wizard.step4.subtitle')}</p>
             <input
               className="w-full border dark:border-slate-700 p-2 rounded mb-4 focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-              placeholder="After I pour my coffee, I will read 1 page"
+              placeholder={t('wizard.step4.placeholder')}
               value={data.cueHabitStack}
               onChange={(e) => setData({ ...data, cueHabitStack: e.target.value })}
               autoFocus
             />
              <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg mb-4 text-xs text-indigo-800 dark:text-indigo-300 italic">
-               "One of the best ways to build a new habit is to identify a current habit you already do each day and then stack your new behavior on top."
+               {t('wizard.step4.quote')}
             </div>
              <div className="flex gap-2">
-                <button onClick={() => setStep(3)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Back</button>
-                <button onClick={() => setStep(5)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">Next</button>
+                <button onClick={() => setStep(3)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">{t('wizard.back')}</button>
+                <button onClick={() => setStep(5)} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 flex-1">{t('wizard.next')}</button>
             </div>
           </div>
         )}
 
         {step === 5 && (
           <div>
-            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">Schedule (Frequency)</label>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">How often do you want to do this habit?</p>
+            <label className="block mb-2 font-medium text-slate-900 dark:text-slate-200">{t('wizard.step5.label')}</label>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">{t('wizard.step5.subtitle')}</p>
             
             <div className="flex gap-3 mb-4">
               <button
@@ -177,7 +179,7 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
                     : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
                 )}
               >
-                Every Day
+                {t('wizard.step5.every_day')}
               </button>
               <button
                 onClick={() => setIsDaily(false)}
@@ -188,7 +190,7 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
                     : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
                 )}
               >
-                Specific Days
+                {t('wizard.step5.specific_days')}
               </button>
             </div>
 
@@ -212,23 +214,23 @@ const HabitWizard: React.FC<HabitWizardProps> = ({ onClose, onSuccess }) => {
             )}
 
             <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg mb-4 text-xs text-indigo-800 dark:text-indigo-300 italic">
-              "You do not rise to the level of your goals. You fall to the level of your systems."
+              {t('wizard.step5.quote')}
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => setStep(4)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">Back</button>
+              <button onClick={() => setStep(4)} className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-slate-600">{t('wizard.back')}</button>
               <button 
                 onClick={handleSubmit} 
                 disabled={loading || (!isDaily && selectedDays.length === 0)}
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex-1 disabled:opacity-50"
               >
-                {loading ? 'Creating...' : 'Create Habit'}
+                {loading ? t('wizard.step5.creating') : t('wizard.step5.create')}
               </button>
             </div>
           </div>
         )}
         
-        <button onClick={onClose} className="mt-4 w-full text-center text-gray-500 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 text-sm transition-colors">Cancel</button>
+        <button onClick={onClose} className="mt-4 w-full text-center text-gray-500 dark:text-slate-500 hover:text-gray-700 dark:hover:text-slate-300 text-sm transition-colors">{t('wizard.cancel')}</button>
       </div>
     </div>
   );

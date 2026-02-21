@@ -1,0 +1,21 @@
+{
+  "title": "我的旅程洞察",
+  "back_button": "返回",
+  "loading_analytics": "正在加载统计数据...",
+  "no_data": "暂无数据",
+  "mood_habit_correlation": "心情与习惯关联",
+  "quote": "“了解你的模式是掌握它们的第一步。”",
+  "logs": "条记录",
+  "avg_habits_per_day": "平均每日习惯",
+  "top_habits": "常做习惯",
+  "moods_last_7_days": "心情分布 (最近7天)",
+  "no_mood_data": "最近7天无心情数据。",
+  "consistency_rhythm": "一致性节奏 (30天)",
+  "habit_strength": "习惯强度",
+  "milestones_memories": "里程碑与回忆",
+  "no_milestones": "你的旅程才刚刚开始。里程碑将显示在这里。",
+  "emotional_journey": "情感旅程",
+  "no_mood_logs": "暂无心情记录。",
+  "load_more": "加载更多",
+  "loading": "加载中..."
+}

@@ -6,8 +6,11 @@ import { useThemeStore } from '../store/themeStore';
 import { useNotifications } from '../hooks/useNotifications';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const Settings = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, setUser, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -40,7 +43,7 @@ const Settings = () => {
           setUser(res.data);
         }
       } catch {
-        toast.error('Failed to load profile');
+        toast.error(t('settings.toast.profile_error'));
       }
     };
     fetchProfile();
@@ -53,11 +56,11 @@ const Settings = () => {
       const res = await api.put('/users/me', { identityStatement, email });
       setUser(res.data);
       setProfileSaved(true);
-      toast.success('Profile updated!');
+      toast.success(t('settings.toast.update_success'));
       setTimeout(() => setProfileSaved(false), 2000);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      toast.error(error.response?.data?.message || t('settings.toast.update_error'));
     } finally {
       setProfileLoading(false);
     }
@@ -65,11 +68,11 @@ const Settings = () => {
 
   const handlePasswordChange = async () => {
     if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
+      toast.error(t('settings.toast.password_mismatch'));
       return;
     }
     if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('settings.toast.password_min_length'));
       return;
     }
     setPasswordLoading(true);
@@ -78,13 +81,13 @@ const Settings = () => {
         currentPassword,
         newPassword,
       });
-      toast.success('Password changed successfully!');
+      toast.success(t('settings.toast.password_success'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      toast.error(error.response?.data?.message || t('settings.toast.password_error'));
     } finally {
       setPasswordLoading(false);
     }
@@ -92,18 +95,18 @@ const Settings = () => {
 
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
-      toast.error('Please enter your password to confirm');
+      toast.error(t('settings.toast.delete_confirm_password'));
       return;
     }
     setDeleteLoading(true);
     try {
       await api.post('/users/me/delete-account', { password: deletePassword });
-      toast.success('Account deleted. Goodbye!');
+      toast.success(t('settings.toast.delete_success'));
       logout();
       navigate('/login');
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to delete account');
+      toast.error(error.response?.data?.message || t('settings.toast.delete_error'));
     } finally {
       setDeleteLoading(false);
     }
@@ -121,7 +124,7 @@ const Settings = () => {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Settings</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{t('settings.title')}</h1>
           </div>
         </div>
       </div>
@@ -134,15 +137,15 @@ const Settings = () => {
               <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Profile</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Your identity and account details</p>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('settings.profile.title')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.profile.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Email
+                {t('settings.profile.email')}
               </label>
               <input
                 type="email"
@@ -156,18 +159,18 @@ const Settings = () => {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-indigo-500" />
-                  Identity Statement
+                  {t('settings.profile.identityStatement')}
                 </span>
               </label>
               <input
                 type="text"
                 value={identityStatement}
                 onChange={(e) => setIdentityStatement(e.target.value)}
-                placeholder="I am a..."
+                placeholder={t('settings.profile.identityPlaceholder')}
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
               />
               <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
-                "Every action you take is a vote for the type of person you wish to become."
+                {t('settings.profile.identityHint')}
               </p>
             </div>
 
@@ -179,12 +182,12 @@ const Settings = () => {
               {profileSaved ? (
                 <>
                   <Check className="w-4 h-4" />
-                  Saved!
+                  {t('settings.profile.saved')}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  {profileLoading ? 'Saving...' : 'Save Changes'}
+                  {profileLoading ? t('settings.profile.saving') : t('settings.profile.save')}
                 </>
               )}
             </button>
@@ -202,18 +205,29 @@ const Settings = () => {
               )}
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Preferences</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Customize your experience</p>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('settings.preferences.title')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.preferences.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
+            {/* Language Switcher */}
+            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
+              <div>
+                <p className="font-medium text-slate-900 dark:text-white">{t('settings.preferences.language')}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('settings.preferences.subtitle')}
+                </p>
+              </div>
+              <LanguageSwitcher />
+            </div>
+
             {/* Theme Toggle */}
             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
               <div>
-                <p className="font-medium text-slate-900 dark:text-white">Theme</p>
+                <p className="font-medium text-slate-900 dark:text-white">{t('settings.preferences.theme')}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+                  {theme === 'dark' ? t('settings.preferences.darkMode') : t('settings.preferences.lightMode')}
                 </p>
               </div>
               <button
@@ -237,13 +251,13 @@ const Settings = () => {
             {/* Notifications Toggle */}
             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
               <div>
-                <p className="font-medium text-slate-900 dark:text-white">Notifications</p>
+                <p className="font-medium text-slate-900 dark:text-white">{t('settings.preferences.notifications')}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   {permission === 'denied'
-                    ? 'Blocked by browser'
+                    ? t('settings.preferences.blocked')
                     : notificationsEnabled
-                    ? 'Enabled'
-                    : 'Disabled'}
+                    ? t('settings.preferences.enabled')
+                    : t('settings.preferences.disabled')}
                 </p>
               </div>
               <button
@@ -274,15 +288,15 @@ const Settings = () => {
               <Lock className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Security</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Change your password</p>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t('settings.security.title')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.security.subtitle')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Current Password
+                {t('settings.security.currentPassword')}
               </label>
               <input
                 type="password"
@@ -293,7 +307,7 @@ const Settings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                New Password
+                {t('settings.security.newPassword')}
               </label>
               <input
                 type="password"
@@ -304,7 +318,7 @@ const Settings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                Confirm New Password
+                {t('settings.security.confirmPassword')}
               </label>
               <input
                 type="password"
@@ -319,7 +333,7 @@ const Settings = () => {
               className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-all disabled:opacity-50 shadow-sm"
             >
               <Lock className="w-4 h-4" />
-              {passwordLoading ? 'Changing...' : 'Change Password'}
+              {passwordLoading ? t('settings.security.changing') : t('settings.security.changePassword')}
             </button>
           </div>
         </section>
@@ -331,8 +345,8 @@ const Settings = () => {
               <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">Danger Zone</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Irreversible actions</p>
+              <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">{t('settings.dangerZone.title')}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.dangerZone.subtitle')}</p>
             </div>
           </div>
 
@@ -342,16 +356,16 @@ const Settings = () => {
               className="flex items-center gap-2 px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
             >
               <Trash2 className="w-4 h-4" />
-              Delete My Account
+              {t('settings.dangerZone.deleteAccount')}
             </button>
           ) : (
             <div className="space-y-4 p-4 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800">
               <p className="text-sm text-red-700 dark:text-red-300 font-medium">
-                This will permanently delete your account and all your data. This action cannot be undone.
+                {t('settings.dangerZone.deleteWarning')}
               </p>
               <div>
                 <label className="block text-sm font-medium text-red-700 dark:text-red-300 mb-1.5">
-                  Enter your password to confirm
+                  {t('settings.dangerZone.confirmPassword')}
                 </label>
                 <input
                   type="password"
@@ -368,7 +382,7 @@ const Settings = () => {
                   }}
                   className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
-                  Cancel
+                  {t('settings.dangerZone.cancel')}
                 </button>
                 <button
                   onClick={handleDeleteAccount}
@@ -376,7 +390,7 @@ const Settings = () => {
                   className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-all disabled:opacity-50 shadow-sm"
                 >
                   <Trash2 className="w-4 h-4" />
-                  {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
+                  {deleteLoading ? t('settings.dangerZone.deleting') : t('settings.dangerZone.delete')}
                 </button>
               </div>
             </div>

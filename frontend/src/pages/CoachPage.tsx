@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HttpAgent } from '@ag-ui/client';
 import { Send, User, Bot, Loader2, CalendarDays, History, Lightbulb } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
@@ -130,17 +131,9 @@ const getLastAssistantContent = (messages: Message[]): string => {
 const getLastAssistantSignature = (messages: Message[]): string => {
   const lastAssistant = [...messages].reverse().find((msg) => isAssistantRole(msg.role));
   if (!lastAssistant) return '';
-  const id = typeof lastAssistant.id === 'string' ? lastAssistant.id : '';
+  const id = lastAssistant.id;
   const content = buildRenderableContent(lastAssistant as unknown as Record<string, unknown>).trim();
   return `${id}::${content}`;
-};
-
-const toUserFacingAgentError = (errorText: string): string => {
-  const normalized = errorText.toLowerCase();
-  if (normalized.includes('invalid token') || normalized.includes('401')) {
-    return 'AI service token is invalid on backend. Please configure a valid AGENTSCOPE_MODEL_API_KEY.';
-  }
-  return `AG-UI error: ${errorText}`;
 };
 
 const extractAssistantFromMessagesArray = (candidate: unknown): string | null => {
@@ -199,6 +192,7 @@ const extractAssistantFromRunResult = (result: unknown, depth: number = 0): stri
 };
 
 const CoachPage = () => {
+  const { t } = useTranslation('coach');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [agent, setAgent] = useState<HttpAgent | null>(null);
@@ -217,24 +211,29 @@ const CoachPage = () => {
   // Agent activity tracking
   const { activity, processEvent, markRunStart, markRunError, reset: resetActivity } = useAgentActivity();
 
-  const coldStartPrompts = [
-    "我现在有点茫然，请你带我3步开始，越简单越好。",
-    "先问我3个问题，帮我找到第一个2分钟习惯。",
-    "按我今天的状态，给我一个最小可执行动作。"
-  ];
+  const toUserFacingAgentError = useCallback((errorText: string): string => {
+    const normalized = errorText.toLowerCase();
+    if (normalized.includes('invalid token') || normalized.includes('401')) {
+      return t('errors.token');
+    }
+    return t('errors.agui', { error: errorText });
+  }, [t]);
+
+  const promptsData = t('starter.prompts', { returnObjects: true });
+  const coldStartPrompts = Array.isArray(promptsData) ? promptsData as string[] : [];
 
   const normalizePlanItem = (habit: Record<string, unknown>, index: number): HabitPlanItem => {
-    const fallbackName = `Habit ${index + 1}`;
+    const fallbackName = t('defaults.habit_name', { index: index + 1 });
     const name = typeof habit?.name === 'string' && habit.name.trim() ? habit.name.trim() : fallbackName;
     const twoMinuteVersion = typeof habit?.twoMinuteVersion === 'string' && habit.twoMinuteVersion.trim()
         ? habit.twoMinuteVersion.trim()
-        : `Do 2 minutes of ${name}`;
+        : t('defaults.two_minute', { name });
     const cueImplementationIntention = typeof habit?.cueImplementationIntention === 'string' && habit.cueImplementationIntention.trim()
         ? habit.cueImplementationIntention.trim()
-        : 'When I start my day';
+        : t('defaults.intention');
     const cueHabitStack = typeof habit?.cueHabitStack === 'string' && habit.cueHabitStack.trim()
         ? habit.cueHabitStack.trim()
-        : 'After I finish breakfast';
+        : t('defaults.stack');
 
     return {
       name,
@@ -288,7 +287,7 @@ const CoachPage = () => {
       : [];
     const suggestion = typeof obj.suggestion === 'string' && obj.suggestion.trim()
       ? obj.suggestion.trim()
-      : 'Keep going with small, consistent steps this week.';
+      : t('card.weekly.default_suggestion');
 
     const parsed: ParsedWeeklyReview = {
       stats: {
@@ -312,7 +311,7 @@ const CoachPage = () => {
     try {
       await addHabits(plan.habits);
     } catch {
-      toast.error('Failed to add plan');
+      toast.error(t('errors.add_plan_failed'));
     } finally {
       setIsApplyingPlan(false);
     }
@@ -325,17 +324,15 @@ const CoachPage = () => {
     setIsApplyingPlan(true);
     try {
       await addHabits([plan.habits[0]]);
-      toast.success('Added the first tiny habit. Keep it easy.');
+      toast.success(t('success.starter_added'));
     } catch {
-      toast.error('Failed to add starter habit');
+      toast.error(t('errors.add_starter_failed'));
     } finally {
       setIsApplyingPlan(false);
     }
   };
 
   const parseMessageContent = (content: string) => {
-    if (typeof content !== 'string') return { text: JSON.stringify(content), suggestions: [], toolCall: null, plan: null, weeklyReview: null };
-
     let text = content;
     let suggestions: string[] = [];
     let toolCall: ToolCallData | null = null;
@@ -396,7 +393,7 @@ const CoachPage = () => {
     // Fallback: match bare `replies ["..."]` lines
     if (suggestions.length === 0) {
       text = text.replace(
-        /^\s*replies\s+(\[.*\])\s*$/gim,
+        /^\s*replies\s+(\[.*])\s*$/gim,
         (_match: string, jsonPart: string) => {
           try {
             const parsed = JSON5.parse(jsonPart);
@@ -476,7 +473,7 @@ const CoachPage = () => {
           role: 'assistant',
           content: toUserFacingAgentError(errorText),
         });
-        toast.error('AG-UI returned an error from backend.');
+        toast.error(t('errors.agui', { error: 'Backend error' }));
       },
       onRunErrorEvent: ({ event }) => {
         const errEvt = event as unknown as Record<string, unknown>;
@@ -493,7 +490,7 @@ const CoachPage = () => {
           role: 'assistant',
           content: toUserFacingAgentError(errorText),
         });
-        toast.error('Agent run failed.');
+        toast.error(t('errors.run_failed'));
       },
     });
 
@@ -503,7 +500,7 @@ const CoachPage = () => {
       unsubscribe();
       resetActivity();
     };
-  }, [user, token, loadMemoryHitsForMessage, processEvent, resetActivity]);
+  }, [user, token, loadMemoryHitsForMessage, processEvent, resetActivity, toUserFacingAgentError, t]);
 
   // Load chat history or greeting
   useEffect(() => {
@@ -539,7 +536,7 @@ const CoachPage = () => {
                     const fallbackGreeting: Message = {
                         id: `fallback-greeting-${Date.now()}`,
                         role: 'assistant',
-                        content: "欢迎来到 AI Coach。你不需要一次想清楚所有事，我们可以从一个 2 分钟的小动作开始。"
+                        content: t('starter.title') + "\n" + t('starter.subtitle')
                     };
                     setMessages([fallbackGreeting]);
                 } finally {
@@ -552,7 +549,7 @@ const CoachPage = () => {
     };
 
     loadInitialData();
-  }, [user]);
+  }, [user, token, t]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -622,7 +619,7 @@ const CoachPage = () => {
     const promptMessage: Message = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: 'Start Weekly Review',
+      content: t('actions.start_weekly_review'),
       timestamp: new Date().toISOString(),
     };
 
@@ -649,7 +646,7 @@ const CoachPage = () => {
       await loadWeeklyReviewHistory();
       void loadMemoryHitsForMessage(aiMessage.id);
     } catch (error) {
-      toast.error('Failed to generate weekly review');
+      toast.error(t('errors.weekly_review_failed'));
       console.error('Failed to generate weekly review', error);
       markRunError();
     } finally {
@@ -683,27 +680,27 @@ const CoachPage = () => {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
-            <h1 className="text-lg font-semibold text-gray-800">AI Coach</h1>
+            <h1 className="text-lg font-semibold text-gray-800">{t('title')}</h1>
             <button
                 onClick={handleWeeklyReview}
                 disabled={isLoading}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
                 <CalendarDays size={16} />
-                Weekly Review
+                {t('weekly_review')}
             </button>
         </div>
         {weeklyReviewHistory.length > 0 && (
             <div className="mb-3 bg-white border border-indigo-100 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700 mb-2">
                     <History size={14} />
-                    Weekly Review History
+                    {t('weekly_review_history')}
                 </div>
                 <div className="flex flex-wrap gap-2 mb-3">
                     {weeklyReviewHistory.map((item, idx) => {
                       const label = item.formattedDate
                         ? item.formattedDate
-                        : (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : `Review ${weeklyReviewHistory.length - idx}`);
+                        : (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : t('actions.review_label', { index: weeklyReviewHistory.length - idx }));
                       const isSelected = selectedReviewId === item.id;
 
                       return (
@@ -730,7 +727,7 @@ const CoachPage = () => {
                                 bestStreak: selectedReview.bestStreak
                             }}
                             highlights={selectedReview.highlights || []}
-                            suggestion={selectedReview.suggestion || 'Keep going with small, consistent steps this week.'}
+                            suggestion={selectedReview.suggestion || t('card.weekly.default_suggestion')}
                         />
                     </div>
                 )}
@@ -739,9 +736,9 @@ const CoachPage = () => {
         <div className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2">
             {shouldShowStarterGuide && (
                 <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-4">
-                    <h2 className="text-sm font-semibold text-indigo-800">不知道从哪开始？先走这 3 步</h2>
+                    <h2 className="text-sm font-semibold text-indigo-800">{t('starter.title')}</h2>
                     <p className="text-xs text-indigo-700 mt-1">
-                        1. 明确你想成为谁 2. 选一个 2 分钟动作 3. 立刻执行今天最小一步。
+                        {t('starter.subtitle')}
                     </p>
                     <div className="flex flex-wrap gap-2 mt-3">
                         {coldStartPrompts.map((prompt, idx) => (
@@ -761,11 +758,11 @@ const CoachPage = () => {
             {messages.length === 0 && !isLoading && (
                 <div className="text-center text-gray-500 mt-10">
                     <Bot size={48} className="mx-auto mb-2 opacity-50" />
-                    <p>Start chatting with your Atomic Habits Coach!</p>
+                    <p>{t('start_chatting')}</p>
                 </div>
             )}
             {messages.map((msg) => {
-              const { text, suggestions, toolCall, plan, weeklyReview } = parseMessageContent(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content));
+              const { text, suggestions, toolCall, plan, weeklyReview } = parseMessageContent(msg.content);
               const handledToolNames = ['create_first_habit', 'save_user_identity', 'present_weekly_review', 'present_daily_focus'];
               const messageHits = memoryHitsByMessage[msg.id] || [];
               const isAssistantMessage = msg.role !== 'user';
@@ -797,7 +794,7 @@ const CoachPage = () => {
                         <div className="mt-2 max-w-[80%] bg-amber-50 border border-amber-200 rounded-lg p-2.5">
                             <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-700 mb-1.5">
                                 <Lightbulb size={12} />
-                                Memory Used
+                                {t('memory.used')}
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                                 {messageHits.map((hit, idx) => (
@@ -813,23 +810,23 @@ const CoachPage = () => {
                     )}
                     {toolCall && (
                         <div className="mt-2 max-w-[80%] bg-white p-4 rounded-lg shadow border border-blue-100 text-gray-800">
-                            <h3 className="font-semibold text-gray-800 mb-2">Coach Proposal</h3>
+                            <h3 className="font-semibold text-gray-800 mb-2">{t('proposal.title')}</h3>
                             {toolCall.name === 'create_first_habit' && (
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><span className="font-medium text-gray-700">Habit:</span> {String(toolCall.arguments.habitName ?? '')}</p>
-                                    <p><span className="font-medium text-gray-700">2-Min Version:</span> {String(toolCall.arguments.twoMinuteVersion ?? '')}</p>
+                                    <p><span className="font-medium text-gray-700">{t('proposal.habit')}:</span> {String(toolCall.arguments.habitName ?? '')}</p>
+                                    <p><span className="font-medium text-gray-700">{t('proposal.two_minute')}:</span> {String(toolCall.arguments.twoMinuteVersion ?? '')}</p>
                                     <div className="pt-2 flex gap-2">
                                         <button 
-                                            onClick={() => handleSend("Yes, let's set it up!")}
+                                            onClick={() => handleSend(t('proposal.yes_setup'))}
                                             className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 text-xs font-medium transition-colors"
                                         >
-                                            Accept & Save
+                                            {t('proposal.accept')}
                                         </button>
                                         <button 
-                                            onClick={() => handleSend("I'd like to change the details.")}
+                                            onClick={() => handleSend(t('proposal.change_details'))}
                                             className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-300 text-xs font-medium transition-colors"
                                         >
-                                            Modify
+                                            {t('proposal.modify')}
                                         </button>
                                     </div>
                                 </div>
@@ -857,20 +854,20 @@ const CoachPage = () => {
                             )}
                             {toolCall.name === 'save_user_identity' && (
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><span className="font-medium text-gray-700">Identity:</span> {String(toolCall.arguments.identity ?? '')}</p>
+                                    <p><span className="font-medium text-gray-700">{t('proposal.identity')}:</span> {String(toolCall.arguments.identity ?? '')}</p>
                                     <div className="pt-2 flex gap-2">
                                         <button 
-                                            onClick={() => handleSend("Yes, that's who I want to be!")}
+                                            onClick={() => handleSend(t('proposal.yes_identity'))}
                                             className="bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 text-xs font-medium transition-colors"
                                         >
-                                            Confirm Identity
+                                            {t('proposal.confirm_identity')}
                                         </button>
                                     </div>
                                 </div>
                             )}
                              {!handledToolNames.includes(toolCall.name) && (
                                 <div className="text-xs text-gray-500">
-                                    <p className="font-medium text-gray-700">Tool: {String(toolCall.name)}</p>
+                                    <p className="font-medium text-gray-700">{t('proposal.tool')}: {String(toolCall.name)}</p>
                                     <pre className="mt-1 bg-gray-50 p-2 rounded overflow-x-auto border border-gray-200">
                                         {JSON.stringify(toolCall.arguments, null, 2)}
                                     </pre>
@@ -880,7 +877,7 @@ const CoachPage = () => {
                     )}
                     {plan && msg.role !== 'user' && (
                         <div className="mt-2 max-w-[80%] bg-white p-4 rounded-lg shadow border border-indigo-100 text-gray-800">
-                            <h3 className="font-semibold text-indigo-700 mb-1">Suggested Habit Plan</h3>
+                            <h3 className="font-semibold text-indigo-700 mb-1">{t('plan.title')}</h3>
                             {plan.title && (
                                 <p className="text-sm font-medium text-gray-800 mb-1">{plan.title}</p>
                             )}
@@ -891,7 +888,7 @@ const CoachPage = () => {
                                 {plan.habits.map((habit, idx) => (
                                     <li key={`${habit.name}-${idx}`} className="border-b border-gray-100 pb-2 last:border-0">
                                         <p className="font-medium">{idx + 1}. {habit.name}</p>
-                                        <p className="text-xs text-green-700">2-Min: {habit.twoMinuteVersion}</p>
+                                        <p className="text-xs text-green-700">{t('plan.two_min_label')} {habit.twoMinuteVersion}</p>
                                         <p className="text-xs text-gray-500">{habit.cueImplementationIntention}</p>
                                     </li>
                                 ))}
@@ -902,14 +899,14 @@ const CoachPage = () => {
                                     disabled={isApplyingPlan}
                                     className="bg-green-600 text-white px-3 py-1.5 rounded-md hover:bg-green-700 text-xs font-medium transition-colors disabled:opacity-60"
                                 >
-                                    {isApplyingPlan ? 'Saving...' : 'Start Small'}
+                                    {isApplyingPlan ? t('plan.saving') : t('plan.start_small')}
                                 </button>
                                 <button
                                     onClick={() => handleAddAllToHabits(plan)}
                                     disabled={isApplyingPlan}
                                     className="bg-indigo-600 text-white px-3 py-1.5 rounded-md hover:bg-indigo-700 text-xs font-medium transition-colors disabled:opacity-60"
                                 >
-                                    {isApplyingPlan ? <Loader2 size={14} className="animate-spin" /> : 'Add All to Habits'}
+                                    {isApplyingPlan ? <Loader2 size={14} className="animate-spin" /> : t('plan.add_all')}
                                 </button>
                             </div>
                         </div>
@@ -960,7 +957,7 @@ const CoachPage = () => {
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             disabled={isLoading}
             className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            placeholder={isLoading ? "Coach is thinking..." : (shouldShowStarterGuide ? "例如：我该从哪一个微习惯开始？" : "Ask your coach...")}
+            placeholder={isLoading ? t('thinking') : (shouldShowStarterGuide ? t('starter.example_placeholder') : t('placeholder'))}
             />
             <button
             onClick={() => handleSend()}

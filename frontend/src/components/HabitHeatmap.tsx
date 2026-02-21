@@ -1,11 +1,13 @@
 import React from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 interface HabitHeatmapProps {
   completions: string[]; // List of YYYY-MM-DD strings
 }
 
 const HabitHeatmap: React.FC<HabitHeatmapProps> = ({ completions }) => {
+  const { t } = useTranslation();
   // Count completions per day
   const counts = completions.reduce((acc, date) => {
     acc[date] = (acc[date] || 0) + 1;
@@ -39,8 +41,8 @@ const HabitHeatmap: React.FC<HabitHeatmapProps> = ({ completions }) => {
   return (
     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden transition-colors duration-300">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Consistency Map (Last 90 Days)</h3>
-        <span className="text-xs text-slate-400 dark:text-slate-500">Every square is a victory</span>
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('heatmap.title')}</h3>
+        <span className="text-xs text-slate-400 dark:text-slate-500">{t('heatmap.subtitle')}</span>
       </div>
       
       <div className="overflow-x-auto pb-2">
@@ -65,13 +67,13 @@ const HabitHeatmap: React.FC<HabitHeatmapProps> = ({ completions }) => {
       </div>
       
       <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 justify-end">
-        <span>Rest</span>
+        <span>{t('heatmap.legend.rest')}</span>
         <div className="w-3.5 h-3.5 bg-gray-50 border border-gray-100 dark:bg-slate-800/50 dark:border-slate-700 rounded-sm" />
         <div className="w-3.5 h-3.5 bg-emerald-200 dark:bg-emerald-900/30 rounded-sm" />
         <div className="w-3.5 h-3.5 bg-emerald-300 dark:bg-emerald-800/40 rounded-sm" />
         <div className="w-3.5 h-3.5 bg-emerald-400 dark:bg-emerald-700/50 rounded-sm" />
         <div className="w-3.5 h-3.5 bg-emerald-500 dark:bg-emerald-600 rounded-sm" />
-        <span>Action</span>
+        <span>{t('heatmap.legend.action')}</span>
       </div>
     </div>
   );

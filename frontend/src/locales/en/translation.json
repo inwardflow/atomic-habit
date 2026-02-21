@@ -1,0 +1,225 @@
+{
+  "loading": "Loading...",
+  "error": {
+    "unexpected": "An unexpected error occurred.",
+    "title": "Something went wrong",
+    "reload": "Reload page"
+  },
+  "app": {
+    "title": "Atomic Habits",
+    "welcome": "Welcome back",
+    "login": "Login",
+    "register": "Register"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "analytics": "Analytics",
+    "habits": "Habits",
+    "coach": "AI Coach",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "greeting": "Welcome back,",
+    "subtitle": "Let's make today 1% better.",
+    "no_habits": {
+      "title": "No habits yet",
+      "subtitle": "Get started by creating your first habit.",
+      "cta": "Create your first habit"
+    },
+    "sections": {
+      "identity": "My Identity Journeys",
+      "identity_subtitle": "Focus on who you are becoming, not just what you want to achieve.",
+      "habits": "Daily Habits",
+      "habits_subtitle": "Small steps to big results.",
+      "goals": "Active Goals"
+    },
+    "buttons": {
+      "new_habit": "New Habit",
+      "chat": "Chat with AI Coach"
+    }
+  },
+  "habit_card": {
+    "status": {
+      "paused": "Paused",
+      "rest_day": "Rest day"
+    },
+    "streak": {
+      "day": "Day",
+      "days": "Days"
+    },
+    "menu": {
+      "start_timer": "Start 2-Min Timer",
+      "rename": "Rename",
+      "pause": "Pause Habit",
+      "resume": "Resume Habit",
+      "delete": "Delete",
+      "delete_confirm": "Are you sure? This cannot be undone."
+    },
+    "labels": {
+      "when_where": "When / Where",
+      "habit_stack": "Habit Stack",
+      "two_min_rule": "2-Min Rule"
+    },
+    "actions": {
+      "mark_complete": "Mark as complete",
+      "mark_incomplete": "Mark as incomplete"
+    },
+    "notifications": {
+      "complete": "Nice work! +1% Better",
+      "timer_complete": "Timer complete! Habit marked as done."
+    }
+  },
+  "identity_score": {
+    "title": "I am a {{identity}}",
+    "levels": {
+      "master": "Master",
+      "expert": "Expert",
+      "practitioner": "Practitioner",
+      "apprentice": "Apprentice",
+      "novice": "Novice"
+    },
+    "level_label": "Level {{level}}",
+    "xp_label": "XP: {{current}}/{{total}}",
+    "next_level": "Next: Level {{level}}",
+    "stats": {
+      "streak": "Day Streak",
+      "ready": "Ready to Start",
+      "small_wins": "Small Wins"
+    },
+    "badges": {
+      "title": "Earned Badges ({{count}})"
+    },
+    "encouragement": {
+      "imperfect": "You don't have to be perfect. You just have to show up today."
+    },
+    "levelup": {
+      "title": "LEVEL UP!",
+      "subtitle": "You are now Level {{level}}",
+      "quote": "\"Every level is proof that you are becoming the person you want to be.\""
+    },
+    "new_badge": {
+      "title": "New Badge Unlocked!"
+    }
+  },
+  "heatmap": {
+    "title": "Consistency Map (Last 90 Days)",
+    "subtitle": "Every square is a victory",
+    "legend": {
+      "rest": "Rest",
+      "action": "Action"
+    }
+  },
+  "goal_list": {
+    "system_label": "Your Daily System",
+    "more_habits": "+ {{count}} more habits",
+    "active_journey": "Active Journey",
+    "target": "Target: {{date}}",
+    "ongoing": "Ongoing",
+    "status": {
+      "completed": "Completed",
+      "in_progress": "In Progress"
+    }
+  },
+  "mood": {
+    "title": "How are you feeling right now?",
+    "placeholder": "What's on your mind?",
+    "add_note": "Add a note (optional)",
+    "save_btn": "Save Check-in",
+    "saving_btn": "Saving...",
+    "cancel_btn": "Cancel",
+    "success": "Mood logged.",
+    "error": "Failed to log mood.",
+    "types": {
+      "motivated": "Motivated",
+      "focused": "Focused",
+      "happy": "Happy",
+      "neutral": "Neutral",
+      "tired": "Tired",
+      "sad": "Sad",
+      "anxious": "Anxious",
+      "frustrated": "Frustrated"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Your identity and account details",
+      "email": "Email",
+      "identityStatement": "Identity Statement",
+      "identityPlaceholder": "I am a...",
+      "identityHint": "\"Every action you take is a vote for the type of person you wish to become.\"",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "saved": "Saved!"
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Customize your experience",
+      "language": "Language",
+      "theme": "Theme",
+      "darkMode": "Dark mode",
+      "lightMode": "Light mode",
+      "notifications": "Notifications",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "blocked": "Blocked by browser"
+    },
+    "security": {
+      "title": "Security",
+      "subtitle": "Change your password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "changePassword": "Change Password",
+      "changing": "Changing..."
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "subtitle": "Irreversible actions",
+      "deleteAccount": "Delete My Account",
+      "deleteWarning": "This will permanently delete your account and all your data. This action cannot be undone.",
+      "confirmPassword": "Enter your password to confirm",
+      "cancel": "Cancel",
+      "delete": "Permanently Delete",
+      "deleting": "Deleting..."
+    },
+    "toast": {
+      "profile_error": "Failed to load profile",
+      "update_success": "Profile updated!",
+      "update_error": "Failed to update profile",
+      "password_mismatch": "New passwords do not match",
+      "password_min_length": "Password must be at least 6 characters",
+      "password_success": "Password changed successfully!",
+      "password_error": "Failed to change password",
+      "delete_confirm_password": "Please enter your password to confirm",
+      "delete_success": "Account deleted. Goodbye!",
+      "delete_error": "Failed to delete account"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "subtitle": "Or",
+      "createAccount": "create a new account",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in...",
+      "failed": "Login failed"
+    },
+    "register": {
+      "title": "Create Identity",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "identityLabel": "Who do you want to become?",
+      "identityPlaceholder": "e.g., I am a writer",
+      "submit": "Start My Journey",
+      "success": "Registration successful! Please login.",
+      "failed": "Registration failed"
+    },
+    "haveAccount": "Already have an account?",
+    "loginLink": "Login"
+  }
+}

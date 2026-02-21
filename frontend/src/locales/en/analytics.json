@@ -1,0 +1,21 @@
+{
+  "title": "My Journey Insights",
+  "back_button": "Go back",
+  "loading_analytics": "Loading analytics...",
+  "no_data": "No data available",
+  "mood_habit_correlation": "Mood & Habit Correlation",
+  "quote": "\"Understanding your patterns is the first step to mastering them.\"",
+  "logs": "logs",
+  "avg_habits_per_day": "Avg. Habits / Day",
+  "top_habits": "Top Habits",
+  "moods_last_7_days": "Moods (Last 7 Days)",
+  "no_mood_data": "No mood data for the last 7 days.",
+  "consistency_rhythm": "Consistency Rhythm (30 Days)",
+  "habit_strength": "Habit Strength",
+  "milestones_memories": "Milestones & Memories",
+  "no_milestones": "Your journey has just begun. Milestones will appear here.",
+  "emotional_journey": "Emotional Journey",
+  "no_mood_logs": "No mood logs yet.",
+  "load_more": "Load More",
+  "loading": "Loading..."
+}

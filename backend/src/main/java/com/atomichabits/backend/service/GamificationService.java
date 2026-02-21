@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import com.atomichabits.backend.model.HabitCompletion;
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -18,40 +17,38 @@ import java.util.stream.Collectors;
 public class GamificationService {
 
     private final BadgeRepository badgeRepository;
-    private final HabitCompletionRepository habitCompletionRepository;
 
-    public GamificationService(BadgeRepository badgeRepository, HabitCompletionRepository habitCompletionRepository) {
+    public GamificationService(BadgeRepository badgeRepository) {
         this.badgeRepository = badgeRepository;
-        this.habitCompletionRepository = habitCompletionRepository;
     }
 
     public void checkAndAwardBadges(User user, int currentStreak, int totalCompletions, List<HabitCompletion> completions) {
         // Streak Badges
         if (currentStreak >= 3) {
-            awardBadgeIfNotExists(user, "3 Day Streak", "You've completed habits for 3 days in a row!", "flame");
+            awardBadgeIfNotExists(user, "badge.streak.3.title", "badge.streak.3.desc", "flame");
         }
         if (currentStreak >= 7) {
-            awardBadgeIfNotExists(user, "7 Day Streak", "You're on fire! 7 days in a row.", "zap");
+            awardBadgeIfNotExists(user, "badge.streak.7.title", "badge.streak.7.desc", "zap");
         }
         if (currentStreak >= 14) {
-            awardBadgeIfNotExists(user, "2 Week Streak", "Two weeks of consistency!", "zap-filled");
+            awardBadgeIfNotExists(user, "badge.streak.14.title", "badge.streak.14.desc", "zap-filled");
         }
         if (currentStreak >= 30) {
-            awardBadgeIfNotExists(user, "Identity Shifter", "30 days of consistency. You are becoming your habits.", "diamond");
+            awardBadgeIfNotExists(user, "badge.streak.30.title", "badge.streak.30.desc", "diamond");
         }
 
         // Total Completion Badges
         if (totalCompletions >= 1) {
-            awardBadgeIfNotExists(user, "First Step", "You completed your first habit!", "footprints");
+            awardBadgeIfNotExists(user, "badge.count.1.title", "badge.count.1.desc", "footprints");
         }
         if (totalCompletions >= 10) {
-            awardBadgeIfNotExists(user, "Momentum", "10 habits down. Keep going!", "arrow-up");
+            awardBadgeIfNotExists(user, "badge.count.10.title", "badge.count.10.desc", "arrow-up");
         }
         if (totalCompletions >= 50) {
-            awardBadgeIfNotExists(user, "Habit Master", "50 habits completed. You're building a lifestyle.", "star");
+            awardBadgeIfNotExists(user, "badge.count.50.title", "badge.count.50.desc", "star");
         }
         if (totalCompletions >= 100) {
-            awardBadgeIfNotExists(user, "Century Club", "100 habits completed.", "trophy");
+            awardBadgeIfNotExists(user, "badge.count.100.title", "badge.count.100.desc", "trophy");
         }
 
         // Time-based Badges
@@ -66,7 +63,7 @@ public class GamificationService {
                 });
         
         if (hasEarlyMorning) {
-            awardBadgeIfNotExists(user, "Early Bird", "Completed a habit before 8 AM. Seizing the day!", "sunrise");
+            awardBadgeIfNotExists(user, "badge.time.early.title", "badge.time.early.desc", "sunrise");
         }
 
         boolean hasLateNight = completions.stream()
@@ -76,7 +73,7 @@ public class GamificationService {
                 });
 
         if (hasLateNight) {
-            awardBadgeIfNotExists(user, "Night Owl", "Completed a habit late at night. Dedication doesn't sleep.", "moon");
+            awardBadgeIfNotExists(user, "badge.time.late.title", "badge.time.late.desc", "moon");
         }
 
         // Weekend Warrior: Completed habits on both Sat and Sun in the same weekend?
@@ -86,7 +83,7 @@ public class GamificationService {
                 .collect(Collectors.toSet());
         
         if (days.contains(DayOfWeek.SATURDAY) && days.contains(DayOfWeek.SUNDAY)) {
-            awardBadgeIfNotExists(user, "Weekend Warrior", "Habits don't take weekends off.", "calendar");
+            awardBadgeIfNotExists(user, "badge.time.weekend.title", "badge.time.weekend.desc", "calendar");
         }
     }
 
