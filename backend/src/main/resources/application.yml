@@ -16,9 +16,9 @@ spring:
         url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:atomichabits;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
         username: ${SPRING_DATASOURCE_USERNAME:sa}
         password: ${SPRING_DATASOURCE_PASSWORD:password}
-        driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+        # driver-class-name is auto-detected by Spring Boot based on URL
     jpa:
-        database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.H2Dialect}
+        # database-platform is auto-detected by Hibernate
         hibernate:
             ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
         show-sql: ${SPRING_JPA_SHOW_SQL:false}
