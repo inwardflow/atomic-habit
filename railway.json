@@ -3,9 +3,7 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "backend/Dockerfile",
-    "watchPatterns": [
-      "backend/**"
-    ]
+    "dockerContext": "backend"
   },
   "deploy": {
     "startCommand": "java -jar /app/app.jar",
