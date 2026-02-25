@@ -2,10 +2,10 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
-COPY pom.xml ./
+COPY backend/pom.xml ./
 RUN mvn -B -q dependency:go-offline
 
-COPY src ./src
+COPY backend/src ./src
 RUN mvn -B clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
