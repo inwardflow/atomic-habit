@@ -98,7 +98,7 @@ Now, open the `.env` file and fill in the required values. **At a minimum, you m
 | ----------------------------- | --------------------------------------------------------------------------- |
 | `AGENTSCOPE_MODEL_API_KEY`    | **Required.** Your API key from an OpenAI-compatible service (e.g., SiliconFlow). |
 | `AGENTSCOPE_MODEL_BASE_URL`   | The base URL of the AI service. Defaults to SiliconFlow.                    |
-| `AGENTSCOPE_MODEL_MODEL_NAME` | The specific model to use. Defaults to `Qwen/Qwen2.5-72B-Instruct`.         |
+| `AGENTSCOPE_MODEL_NAME` | The specific model to use. Defaults to `Qwen/Qwen2.5-72B-Instruct`.         |
 | `SPRING_JWT_SECRET`           | A long, random string for signing authentication tokens.                    |
 | `SPRING_DATASOURCE_URL`       | The JDBC URL for your database. Defaults to a local MySQL instance.         |
 | `SPRING_DATASOURCE_USERNAME`  | Database username.                                                          |

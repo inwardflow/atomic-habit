@@ -1,15 +1,13 @@
 package com.atomichabits.backend.service;
 
 import lombok.extern.slf4j.Slf4j;
+import com.atomichabits.backend.config.CoachPromptProperties;
 import com.atomichabits.backend.model.*;
 import com.atomichabits.backend.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
-import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.model.OpenAIChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -63,27 +61,22 @@ public class MemoryService {
     private final ChatMessageRepository chatMessageRepository;
     private final MoodService moodService;
     private final HabitCompletionRepository habitCompletionRepository;
-
-    @Value("${agentscope.model.api-key}")
-    private String apiKey;
-
-    @Value("${agentscope.model.model-name}")
-    private String modelName;
-
-    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
-    private String baseUrl;
+    private final AgentScopeClient agentScopeClient;
+    private final CoachPromptProperties promptProperties;
 
     @Value("${coach.memory.llm-extraction-enabled:true}")
     private boolean llmExtractionEnabled;
 
     private final ObjectMapper objectMapper;
 
-    public MemoryService(CoachMemoryRepository memoryRepository, UserRepository userRepository, ChatMessageRepository chatMessageRepository, MoodService moodService, HabitCompletionRepository habitCompletionRepository) {
+    public MemoryService(CoachMemoryRepository memoryRepository, UserRepository userRepository, ChatMessageRepository chatMessageRepository, MoodService moodService, HabitCompletionRepository habitCompletionRepository, AgentScopeClient agentScopeClient, CoachPromptProperties promptProperties) {
         this.memoryRepository = memoryRepository;
         this.userRepository = userRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.moodService = moodService;
         this.habitCompletionRepository = habitCompletionRepository;
+        this.agentScopeClient = agentScopeClient;
+        this.promptProperties = promptProperties;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -93,7 +86,7 @@ public class MemoryService {
     public void generateDailySummaries() {
         List<User> users = userRepository.findAll();
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        
+
         for (User user : users) {
             try {
                 generateSummaryForDate(user, yesterday);
@@ -102,7 +95,7 @@ public class MemoryService {
             }
         }
     }
-    
+
     @Transactional
     public void generateSummaryForDate(User user, LocalDate date) {
         // Check if exists
@@ -116,31 +109,31 @@ public class MemoryService {
         // Gather Data
         // 1. Chats
         List<ChatMessage> chats = chatMessageRepository.findByUserIdAndTimestampBetweenOrderByTimestampAsc(user.getId(), start, end);
-        
+
         // 2. Moods
         // Filter moods for that day
         List<MoodLog> moods = moodService.getMoodsSince(user.getId(), start).stream()
                 .filter(m -> m.getCreatedAt().isBefore(end))
-                .collect(Collectors.toList());
-        
+                .toList();
+
         // 3. Habits
         List<HabitCompletion> completions = habitCompletionRepository.findByHabitUserIdAndCompletedAtBetween(user.getId(), start, end);
-        
+
         // If no activity, skip
         if (chats.isEmpty() && moods.isEmpty() && completions.isEmpty()) {
-            return; 
+            return;
         }
-        
+
         String context = buildContextForSummary(chats, moods, completions);
-        
+
         String prompt = "Please create a concise daily summary (max 50 words) for the user's activity on " + date + ". " +
                         "Include key achievements (habits completed), mood patterns, and any important topics discussed in chat. " +
                         "This summary will be used as long-term memory for future coaching. " +
                         "\n\nContext:\n" + context;
-                        
+
         String summary = callAI(prompt);
-        
-        if (summary != null && !summary.isEmpty()) {
+
+        if (StringUtils.hasText(summary)) {
             CoachMemory memory = CoachMemory.builder()
                     .user(user)
                     .type(CoachMemory.MemoryType.DAILY_SUMMARY)
@@ -149,21 +142,21 @@ public class MemoryService {
                     .importanceScore(2)
                     .expiresAt(date.plusDays(35))
                     .build();
-                    
+
             memoryRepository.save(memory);
         }
     }
-    
+
     private String buildContextForSummary(List<ChatMessage> chats, List<MoodLog> moods, List<HabitCompletion> completions) {
         StringBuilder sb = new StringBuilder();
-        
+
         if (!completions.isEmpty()) {
             sb.append("Habits Completed:\n");
             for (HabitCompletion hc : completions) {
                 sb.append("- ").append(hc.getHabit().getName()).append("\n");
             }
         }
-        
+
         if (!moods.isEmpty()) {
             sb.append("Moods Logged:\n");
             for (MoodLog m : moods) {
@@ -172,65 +165,33 @@ public class MemoryService {
                 sb.append("\n");
             }
         }
-        
+
         if (!chats.isEmpty()) {
             sb.append("Chat History:\n");
             for (ChatMessage msg : chats) {
                 sb.append(msg.getRole().toUpperCase()).append(": ").append(msg.getContent()).append("\n");
             }
         }
-        
+
         return sb.toString();
     }
 
     // Protected for testing
     protected String callAI(String prompt) {
-        return callAIWithSystemPrompt(prompt,
-                "Summarize user activity clearly and compassionately.",
-                "MemorySummarizer");
+        String systemPrompt = promptProperties.getMemoryDailySummary();
+        if (!StringUtils.hasText(systemPrompt)) {
+            systemPrompt = "Summarize user activity clearly and compassionately.";
+        }
+        return agentScopeClient.call(prompt, systemPrompt);
     }
 
     // Protected for testing
     protected String callAIForSignalExtraction(String prompt) {
-        return callAIWithSystemPrompt(prompt,
-                "Extract durable user profile memory for habit coaching. Return strict JSON only.",
-                "MemorySignalExtractor");
-    }
-
-    private String callAIWithSystemPrompt(String prompt, String systemPrompt, String agentName) {
-        try {
-            var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
-                    .connectTimeout(java.time.Duration.ofSeconds(30))
-                    .readTimeout(java.time.Duration.ofMinutes(3))
-                    .writeTimeout(java.time.Duration.ofSeconds(30))
-                    .build();
-            var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
-                    .config(transportConfig)
-                    .build();
-            OpenAIChatModel model = OpenAIChatModel.builder()
-                    .apiKey(apiKey)
-                    .modelName(modelName)
-                    .baseUrl(baseUrl)
-                    .httpTransport(httpTransport)
-                    .build();
-
-            ReActAgent summarizer = ReActAgent.builder()
-                    .name(agentName)
-                    .sysPrompt(systemPrompt)
-                    .model(model)
-                    .build();
-
-            Msg response = summarizer.call(Msg.builder()
-                    .role(MsgRole.USER)
-                    .content(TextBlock.builder().text(prompt).build())
-                    .build())
-                    .block();
-
-            return response != null ? response.getTextContent() : null;
-        } catch (Exception e) {
-            log.error("AI call failed for agent {}: {}", agentName, e.getMessage());
-            return null;
+        String systemPrompt = promptProperties.getMemorySignalExtraction();
+        if (!StringUtils.hasText(systemPrompt)) {
+            systemPrompt = "Extract durable user profile memory for habit coaching. Return strict JSON only.";
         }
+        return agentScopeClient.call(prompt, systemPrompt);
     }
 
     @Transactional(readOnly = true)
@@ -241,17 +202,7 @@ public class MemoryService {
         // Return recent non-expired memories.
         return memoryRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId()).stream()
                 .filter(this::isActiveMemory)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public boolean saveUserInsight(String email, String insight) {
-        return saveUserMemory(email, CoachMemory.MemoryType.USER_INSIGHT, insight);
-    }
-
-    @Transactional
-    public boolean saveLongTermFact(String email, String fact) {
-        return saveUserMemory(email, CoachMemory.MemoryType.LONG_TERM_FACT, fact);
+                .toList();
     }
 
     @Transactional
@@ -316,7 +267,7 @@ public class MemoryService {
                 .filter(this::isActiveMemory)
                 .sorted(memoryPriorityComparator())
                 .limit(safeFactLimit)
-                .collect(Collectors.toList());
+                .toList();
 
         List<CoachMemory> insights = memoryRepository
                 .findTop10ByUserIdAndTypeOrderByCreatedAtDesc(user.getId(), CoachMemory.MemoryType.USER_INSIGHT)
@@ -324,7 +275,7 @@ public class MemoryService {
                 .filter(this::isActiveMemory)
                 .sorted(memoryPriorityComparator())
                 .limit(safeInsightLimit)
-                .collect(Collectors.toList());
+                .toList();
 
         List<CoachMemory> summaries = memoryRepository
                 .findTop10ByUserIdAndTypeOrderByReferenceDateDesc(user.getId(), CoachMemory.MemoryType.DAILY_SUMMARY)
@@ -332,7 +283,7 @@ public class MemoryService {
                 .filter(this::isActiveMemory)
                 .limit(safeSummaryLimit)
                 .sorted(Comparator.comparing(CoachMemory::getReferenceDate, Comparator.nullsLast(Comparator.naturalOrder())))
-                .collect(Collectors.toList());
+                .toList();
 
         if (facts.isEmpty() && insights.isEmpty() && summaries.isEmpty()) {
             return "No saved long-term memory yet. Build memory from this conversation.";
@@ -343,7 +294,7 @@ public class MemoryService {
                 .filter(m -> safeScore(m) >= 4)
                 .sorted(memoryPriorityComparator())
                 .limit(3)
-                .collect(Collectors.toList());
+                .toList();
 
         if (!priorityMemories.isEmpty()) {
             sb.append("Priority coaching preferences:\n");
@@ -382,7 +333,7 @@ public class MemoryService {
 
         List<CoachMemory> activeMemories = memoryRepository.findTop30ByUserIdOrderByCreatedAtDesc(user.getId()).stream()
                 .filter(this::isActiveMemory)
-                .collect(Collectors.toList());
+                .toList();
 
         if (activeMemories.isEmpty()) {
             return "No saved long-term memory yet. Build memory from this conversation.";
@@ -398,13 +349,13 @@ public class MemoryService {
                         .reversed()
                         .thenComparing(CoachMemory::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(safeLimit)
-                .collect(Collectors.toList());
+                .toList();
 
         List<CoachMemory> summaries = activeMemories.stream()
                 .filter(m -> m.getType() == CoachMemory.MemoryType.DAILY_SUMMARY)
                 .sorted(Comparator.comparing(CoachMemory::getReferenceDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(3)
-                .collect(Collectors.toList());
+                .toList();
 
         if (profileMemories.isEmpty() && summaries.isEmpty()) {
             return "No saved long-term memory yet. Build memory from this conversation.";
@@ -433,7 +384,7 @@ public class MemoryService {
             return 0;
         }
 
-        List<String> recentUserMessages = extractRecentUserMessages(messages, 3);
+        List<String> recentUserMessages = extractRecentUserMessages(messages);
         if (recentUserMessages.isEmpty()) {
             return 0;
         }
@@ -510,15 +461,15 @@ public class MemoryService {
         try {
             JsonNode root = objectMapper.readTree(jsonPayload);
             List<MemoryCandidate> candidates = new ArrayList<>();
-            appendCandidatesFromArray(candidates, root.path("facts"), CoachMemory.MemoryType.LONG_TERM_FACT, 2);
-            appendCandidatesFromArray(candidates, root.path("insights"), CoachMemory.MemoryType.USER_INSIGHT, 2);
+            appendCandidatesFromArray(candidates, root.path("facts"), CoachMemory.MemoryType.LONG_TERM_FACT);
+            appendCandidatesFromArray(candidates, root.path("insights"), CoachMemory.MemoryType.USER_INSIGHT);
             return candidates;
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
     }
 
-    private void appendCandidatesFromArray(List<MemoryCandidate> target, JsonNode arrayNode, CoachMemory.MemoryType type, int maxItems) {
+    private void appendCandidatesFromArray(List<MemoryCandidate> target, JsonNode arrayNode, CoachMemory.MemoryType type) {
         if (arrayNode == null || !arrayNode.isArray()) {
             return;
         }
@@ -534,7 +485,7 @@ public class MemoryService {
             }
             target.add(new MemoryCandidate(type, normalizeCandidateSentence(text)));
             added++;
-            if (added >= maxItems) {
+            if (added >= 2) {
                 break;
             }
         }
@@ -565,10 +516,9 @@ public class MemoryService {
     }
 
     private boolean isNearDuplicate(String existing, String candidate) {
-        if (existing.equals(candidate)) return true;
-        if (existing.length() >= 20 && candidate.contains(existing)) return true;
-        if (candidate.length() >= 20 && existing.contains(candidate)) return true;
-        return false;
+        return existing.equals(candidate) ||
+               (existing.length() >= 20 && candidate.contains(existing)) ||
+               (candidate.length() >= 20 && existing.contains(candidate));
     }
 
     private Comparator<CoachMemory> memoryPriorityComparator() {
@@ -662,9 +612,9 @@ public class MemoryService {
         return score;
     }
 
-    private List<String> extractRecentUserMessages(List<Msg> messages, int limit) {
+    private List<String> extractRecentUserMessages(List<Msg> messages) {
         List<String> collected = new ArrayList<>();
-        for (int i = messages.size() - 1; i >= 0 && collected.size() < limit; i--) {
+        for (int i = messages.size() - 1; i >= 0 && collected.size() < 3; i--) {
             Msg msg = messages.get(i);
             if (msg == null || msg.getRole() != MsgRole.USER) {
                 continue;
@@ -689,7 +639,7 @@ public class MemoryService {
             return Collections.emptyList();
         }
 
-        String[] sentences = normalized.split("(?<=[.!?\\u3002\\uFF01\\uFF1F])\\s+");
+        String[] sentences = normalized.split("(?<=[.!?。！？])\\s+");
         if (sentences.length == 0) {
             sentences = new String[]{normalized};
         }
@@ -702,7 +652,7 @@ public class MemoryService {
             }
 
             String lower = " " + trimmed.toLowerCase(Locale.ROOT) + " ";
-            if (lower.contains("?") || lower.contains("\uFF1F")) {
+            if (lower.contains("?") || lower.contains("？")) {
                 continue;
             }
 
@@ -743,7 +693,7 @@ public class MemoryService {
         }
 
         if (!normalized.endsWith(".") && !normalized.endsWith("!") && !normalized.endsWith("?")
-                && !normalized.endsWith("\u3002") && !normalized.endsWith("\uFF01") && !normalized.endsWith("\uFF1F")) {
+                && !normalized.endsWith("。") && !normalized.endsWith("！") && !normalized.endsWith("？")) {
             normalized = normalized + ".";
         }
         return normalized;
