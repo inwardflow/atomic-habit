@@ -2,6 +2,7 @@ package com.atomichabits.backend.service;
 
 import com.atomichabits.backend.model.*;
 import com.atomichabits.backend.repository.*;
+import com.atomichabits.backend.config.CoachPromptProperties;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
@@ -43,14 +44,18 @@ class MemoryServiceTest {
     @Mock
     private HabitCompletionRepository habitCompletionRepository;
 
+    @Mock
+    private AgentScopeClient agentScopeClient;
+
+    @Mock
+    private CoachPromptProperties promptProperties;
+
     @Spy
     @InjectMocks
     private MemoryService memoryService;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(memoryService, "apiKey", "test-api-key");
-        ReflectionTestUtils.setField(memoryService, "modelName", "test-model");
     }
 
     @Test

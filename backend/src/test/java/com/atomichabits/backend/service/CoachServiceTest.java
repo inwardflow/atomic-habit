@@ -56,14 +56,17 @@ class CoachServiceTest {
     @Mock
     private CoachPromptProperties promptProperties;
 
+    @Mock
+    private AgentScopeClient agentScopeClient;
+
+    @Mock
+    private MemoryService memoryService;
+
     @InjectMocks
     private CoachService coachService;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(coachService, "apiKey", "test-api-key");
-        ReflectionTestUtils.setField(coachService, "modelName", "test-model");
-        ReflectionTestUtils.setField(coachService, "agentscopeEnabled", false);
     }
 
     @Test
@@ -98,6 +101,7 @@ class CoachServiceTest {
 
         when(promptProperties.getWeeklyReviewUser()).thenReturn("User Prompt");
         when(promptProperties.getWeeklyReviewSystem()).thenReturn("System Prompt");
+        when(agentScopeClient.call(anyString(), anyString(), eq(true))).thenReturn("AI disabled (tests).");
 
         // Act
         // Note: usage of AgentScope might fail if not properly mocked or configured.
