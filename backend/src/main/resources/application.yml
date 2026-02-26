@@ -53,7 +53,7 @@ agentscope:
     sse-timeout: ${AGENTSCOPE_SSE_TIMEOUT:300000}
     run-timeout: ${AGENTSCOPE_RUN_TIMEOUT:5m}
   model:
-    api-key: ${AGENTSCOPE_MODEL_API_KEY}
+    api-key: ${AGENTSCOPE_MODEL_API_KEY:}
     model-name: ${AGENTSCOPE_MODEL_NAME:deepseek-ai/DeepSeek-V3.2}
     base-url: ${AGENTSCOPE_MODEL_BASE_URL:https://api.siliconflow.com/v1}
   proxy:
@@ -168,3 +168,7 @@ coach:
       - If streak > 3, mention protecting it.
       - If struggling, mention 'just start small'.
       - No robotic greetings like 'Hello user'. Just the message.
+    memory-daily-summary: |
+      Summarize user activity clearly and compassionately.
+    memory-signal-extraction: |
+      Extract durable user profile memory for habit coaching. Return strict JSON only.

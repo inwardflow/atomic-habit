@@ -13,17 +13,14 @@ import com.atomichabits.backend.repository.ChatMessageRepository;
 import com.atomichabits.backend.repository.UserRepository;
 import com.atomichabits.backend.agent.CoachTools;
 import com.atomichabits.backend.config.CoachPromptProperties;
+import com.atomichabits.backend.dto.HabitResponse;
 import com.atomichabits.backend.model.MoodLog;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
-import io.agentscope.core.model.OpenAIChatModel;
-import io.agentscope.core.tool.Toolkit;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -43,27 +40,7 @@ public class CoachService {
     private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
     private static final Pattern SUGGESTION_SENTENCE_PATTERN = Pattern.compile("([^.!?]+[.!?])");
 
-    @Value("${agentscope.model.api-key}")
-    private String apiKey;
-
-    @Value("${agentscope.model.model-name}")
-    private String modelName;
-
-    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
-    private String baseUrl;
-
-    @Value("${agentscope.enabled:true}")
-    private boolean agentscopeEnabled;
-
-    @Value("${agentscope.proxy.host:}")
-    private String proxyHost;
-
-    @Value("${agentscope.proxy.port:0}")
-    private int proxyPort;
-
-    @Value("${agentscope.proxy.enabled:false}")
-    private boolean proxyEnabled;
-
+    private final AgentScopeClient agentScopeClient;
     private final CoachTools coachTools;
     private final HabitService habitService;
     private final UserService userService;
@@ -75,10 +52,11 @@ public class CoachService {
     private final MemoryService memoryService;
     private final ObjectMapper objectMapper;
 
-    public CoachService(CoachTools coachTools, HabitService habitService, UserService userService, MoodService moodService,
+    public CoachService(AgentScopeClient agentScopeClient, CoachTools coachTools, HabitService habitService, UserService userService, MoodService moodService,
                         ChatMessageRepository chatMessageRepository, UserRepository userRepository,
                         WeeklyReviewRepository weeklyReviewRepository, CoachPromptProperties promptProperties,
                         MemoryService memoryService) {
+        this.agentScopeClient = agentScopeClient;
         this.coachTools = coachTools;
         this.habitService = habitService;
         this.userService = userService;
@@ -94,9 +72,9 @@ public class CoachService {
     public String chat(String email, String userMessage) {
         // Build context
         String context = buildDailyContext(email, userMessage);
-        
+
         // Fetch last 20 messages for better context memory
-        String history = getFormattedChatHistory(email, 20);
+        String history = getFormattedChatHistory(email);
         if (!history.isEmpty()) {
             context += "\nRECENT CONVERSATION HISTORY:\n" + history + "\n";
         }
@@ -110,12 +88,12 @@ public class CoachService {
         } else {
             systemPrompt = promptProperties.getRegularSystem();
         }
-        
+
         // Save user message
         saveMessage(email, "user", userMessage);
 
-        String aiResponse = callAgent(email, (context.length() > 0 ? "Context:\n" + context + "\nUser Message: " : "") + userMessage, systemPrompt);
-        
+        String aiResponse = agentScopeClient.call((!context.isEmpty() ? "Context:\n" + context + "\nUser Message: " : "") + userMessage, systemPrompt, coachTools);
+
         // Save AI response
         saveMessage(email, "ai", aiResponse);
 
@@ -133,7 +111,7 @@ public class CoachService {
         } catch (Exception ignored) {
             // Memory extraction should not block normal chat responses.
         }
-        
+
         return aiResponse;
     }
 
@@ -141,7 +119,7 @@ public class CoachService {
         String context = buildDailyContext(email, null);
         UserProfileResponse profile = userService.getUserProfile(email);
         boolean isColdStart = isColdStartUser(email);
-        
+
         boolean isNewUser = false;
         if (profile.getCreatedAt() != null) {
             isNewUser = profile.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusDays(1));
@@ -157,7 +135,7 @@ public class CoachService {
         String systemPrompt = promptProperties.getGreetingSystem();
 
         // Only save if we get a valid response (which callAgent handles)
-        String aiResponse = callAgent(email, "Context:\n" + context + "\n\n" + userPrompt, systemPrompt);
+        String aiResponse = agentScopeClient.call("Context:\n" + context + "\n\n" + userPrompt, systemPrompt, coachTools);
         saveMessage(email, "ai", aiResponse);
         return aiResponse;
     }
@@ -180,12 +158,12 @@ public class CoachService {
         return chatMessageRepository.findByUserIdOrderByTimestampAsc(user.getId());
     }
 
-    private String getFormattedChatHistory(String email, int limit) {
+    private String getFormattedChatHistory(String email) {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) return "";
-        List<ChatMessage> messages = chatMessageRepository.findByUserIdOrderByTimestampDesc(user.getId(), PageRequest.of(0, limit));
+        List<ChatMessage> messages = chatMessageRepository.findByUserIdOrderByTimestampDesc(user.getId(), PageRequest.of(0, 20));
         Collections.reverse(messages); // Oldest first
-        
+
         StringBuilder sb = new StringBuilder();
         for (ChatMessage msg : messages) {
             sb.append(msg.getRole().toUpperCase()).append(": ").append(msg.getContent()).append("\n");
@@ -209,7 +187,7 @@ public class CoachService {
         try {
             UserProfileResponse profile = userService.getUserProfile(email);
             Long uId = profile.getId();
-            
+
             // Inject Habits Status (Today)
             List<HabitResponse> habits = habitService.getUserHabits(email);
             long completedCount = habits.stream().filter(HabitResponse::isCompletedToday).count();
@@ -230,11 +208,11 @@ public class CoachService {
                 }
                 context.append("\nIf mood is OVERWHELMED, be extra gentle and suggest only tiny steps. If GRATITUDE is present, acknowledge it positively.\n");
             }
-            
+
             if (profile.getIdentityStatement() != null) {
                 context.append("Identity: ").append(profile.getIdentityStatement()).append("\n");
             }
-            
+
             String memoryContext = memoryService.getRelevantMemoryContext(email, currentUserMessage, 8);
             if (StringUtils.hasText(memoryContext) && !memoryContext.startsWith("No saved long-term memory")) {
                 context.append("\n").append(memoryContext).append("\n");
@@ -250,7 +228,7 @@ public class CoachService {
         List<HabitResponse> habits = habitService.getUserHabits(email);
         UserStatsResponse stats = userService.getUserStats(email);
         UserProfileResponse profile = userService.getUserProfile(email);
-        
+
         StringBuilder context = new StringBuilder();
         context.append("User Identity: ").append(profile.getIdentityStatement()).append("\n");
         context.append("Current Streak: ").append(stats.getCurrentStreak()).append(" days\n");
@@ -260,7 +238,7 @@ public class CoachService {
             context.append("- ").append(habit.getName())
                    .append(" (Completed Today: ").append(habit.isCompletedToday()).append(")\n");
         }
-        
+
         try {
              Long uId = profile.getId();
              // Fetch last 7 days of moods for weekly review
@@ -268,8 +246,8 @@ public class CoachService {
              List<String> gratitude = moods.stream()
                      .filter(m -> "GRATITUDE".equals(m.getMoodType()))
                      .map(MoodLog::getNote)
-                     .collect(Collectors.toList());
-             
+                     .toList();
+
              if (!gratitude.isEmpty()) {
                  context.append("\nRecent Gratitude Logs (Last 7 Days):\n");
                  gratitude.forEach(g -> context.append("- \"").append(g).append("\"\n"));
@@ -277,13 +255,13 @@ public class CoachService {
         } catch (Exception e) {
             // ignore
         }
-        
+
         String userPrompt = promptProperties.getWeeklyReviewUser();
 
         String systemPrompt = promptProperties.getWeeklyReviewSystem();
 
         saveMessage(email, "user", "Start Weekly Review");
-        String aiResponse = callAgent(email, "Context:\n" + context.toString() + "\n\n" + userPrompt, systemPrompt);
+        String aiResponse = agentScopeClient.call("Context:\n" + context + "\n\n" + userPrompt, systemPrompt, true);
         saveMessage(email, "ai", aiResponse);
 
         saveWeeklyReviewRecord(email, stats, aiResponse);
@@ -454,7 +432,7 @@ public class CoachService {
     private List<String> parseHighlights(String highlightsJson) {
         try {
             if (highlightsJson == null || highlightsJson.isBlank()) return Collections.emptyList();
-            return objectMapper.readValue(highlightsJson, new TypeReference<List<String>>() {});
+            return objectMapper.readValue(highlightsJson, new TypeReference<>() {});
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
@@ -492,76 +470,6 @@ public class CoachService {
         // Use a shorter fallback if system prompt is missing (though it shouldn't be)
         if (systemPrompt == null) systemPrompt = "You are a helpful habit coach. Send a short reminder.";
 
-        return callAgent(email, "Context:\n" + context + "\n\n" + userPrompt, systemPrompt);
-    }
-
-    private String callAgent(String userId, String message, String systemPrompt) {
-        if (!agentscopeEnabled) {
-            return "AI disabled (tests).";
-        }
-
-        // Initialize Toolkit
-        Toolkit toolkit = new Toolkit();
-        // Registering tools using the fluent registration API
-        toolkit.registration()
-                .tool(coachTools)
-                .apply();
-
-        // Initialize Model
-        // Configure HTTP transport with explicit timeouts to prevent hanging connections
-        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
-                .connectTimeout(java.time.Duration.ofSeconds(30))
-                .readTimeout(java.time.Duration.ofMinutes(3))
-                .writeTimeout(java.time.Duration.ofSeconds(30))
-                .build();
-        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
-                .config(transportConfig)
-                .build();
-        var modelBuilder = OpenAIChatModel.builder()
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .baseUrl(baseUrl)
-                .httpTransport(httpTransport);
-
-        // Allow backend engineers to explicitly enable/disable proxy via YAML.
-        if (proxyEnabled) {
-            if (proxyHost != null && !proxyHost.isBlank() && proxyPort > 0) {
-                try {
-                    System.setProperty("http.proxyHost", proxyHost);
-                    System.setProperty("http.proxyPort", String.valueOf(proxyPort));
-                    System.setProperty("https.proxyHost", proxyHost);
-                    System.setProperty("https.proxyPort", String.valueOf(proxyPort));
-                } catch (Exception e) {
-                    log.warn("Failed to configure proxy: {}", e.getMessage());
-                }
-            } else {
-                log.warn("Proxy is enabled but host/port is invalid — skipping proxy configuration.");
-            }
-        }
-
-        OpenAIChatModel model = modelBuilder.build();
-
-        // Initialize Agent
-        ReActAgent agent = ReActAgent.builder()
-                .name("AtomicCoach")
-                .sysPrompt(systemPrompt)
-                .model(model)
-                .toolkit(toolkit)
-                .build();
-
-        // Call Agent
-        try {
-            Msg response = agent.call(Msg.builder()
-                    .role(MsgRole.USER)
-                    .content(TextBlock.builder().text(message).build())
-                    .build())
-                    .block();
-
-            return response.getTextContent();
-        } catch (Exception e) {
-            // Fallback response instead of throwing exception
-            return "I am currently unable to connect to the AI service (Invalid API Key or Service Unavailable). " +
-                   "Please check your backend configuration. In the meantime, I'm here to support your habit tracking!";
-        }
+        return agentScopeClient.call("Context:\n" + context + "\n\n" + userPrompt, systemPrompt, coachTools);
     }
 }

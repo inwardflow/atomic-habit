@@ -17,4 +17,6 @@ public class CoachPromptProperties {
     private String weeklyReviewSystem;
     private String reminderUser;
     private String reminderSystem;
+    private String memoryDailySummary;
+    private String memorySignalExtraction;
 }

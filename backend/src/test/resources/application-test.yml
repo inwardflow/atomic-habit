@@ -17,6 +17,8 @@ spring:
 
 agentscope:
   enabled: false # Disable external API calls
+  model:
+    api-key: dummy-test-key # Required for context loading, even if disabled
 
 app:
   rate-limit:
