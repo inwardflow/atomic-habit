@@ -51,7 +51,7 @@ Railway 的官方配置文件，明确指定使用 Dockerfile 构建。
    # AI 模型配置（必须）
    AGENTSCOPE_MODEL_API_KEY=your-siliconflow-api-key
    AGENTSCOPE_MODEL_BASE_URL=https://api.siliconflow.com/v1
-   AGENTSCOPE_MODEL_MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
+   AGENTSCOPE_MODEL_NAME=Qwen/Qwen2.5-72B-Instruct
    
    # 数据库配置（Railway PostgreSQL 会自动注入以下变量）
    # DATABASE_URL - Railway 自动提供
@@ -125,7 +125,7 @@ railway up
 |--------|--------|------|
 | `PORT` | 8080 | 应用监听端口（Railway 会自动设置） |
 | `AGENTSCOPE_MODEL_BASE_URL` | https://api.siliconflow.com/v1 | AI 模型 API 基础 URL |
-| `AGENTSCOPE_MODEL_MODEL_NAME` | Qwen/Qwen2.5-72B-Instruct | AI 模型名称 |
+| `AGENTSCOPE_MODEL_NAME` | Qwen/Qwen2.5-72B-Instruct | AI 模型名称 |
 
 ## 常见问题
 

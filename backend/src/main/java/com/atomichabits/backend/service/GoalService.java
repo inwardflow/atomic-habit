@@ -79,6 +79,7 @@ public class GoalService {
         return mapToResponse(savedGoal);
     }
 
+    @Transactional(readOnly = true)
     public List<GoalResponse> getUserGoals(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -88,6 +89,7 @@ public class GoalService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public GoalResponse getGoal(Long goalId, String email) {
         Goal goal = goalRepository.findById(goalId)
                 .orElseThrow(() -> new ResourceNotFoundException("Goal not found"));
