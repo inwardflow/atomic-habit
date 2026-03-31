@@ -89,7 +89,7 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-agui-spring-boot-starter</artifactId>
-            <version>1.0.9</version>
+            <version>1.0.11</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
