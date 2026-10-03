@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../services/authService';
@@ -38,8 +39,6 @@ const Register = () => {
 
     try {
       await authService.register({ email, password, identityStatement });
-      alert(t('auth.register.success'));
-      navigate('/login');
     } catch (err: any) {
       console.error(err);
       if (err.response?.data?.error) {
@@ -47,6 +46,17 @@ const Register = () => {
       } else {
         setError(t('auth.register.failed'));
       }
+      return;
+    }
+
+    // Sign the new user straight in instead of making them retype their credentials.
+    try {
+      await authService.login({ email, password });
+      toast.success(t('auth.register.welcome'));
+      navigate('/dashboard');
+    } catch {
+      toast.success(t('auth.register.success'));
+      navigate('/login');
     }
   };
 

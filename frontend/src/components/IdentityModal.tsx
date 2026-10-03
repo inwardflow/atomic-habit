@@ -97,7 +97,7 @@ const IdentityModal: React.FC<IdentityModalProps> = ({ onClose }) => {
                                 placeholder={t('step1_placeholder')}
                                 value={identity}
                                 onChange={(e) => setIdentity(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleIdentitySubmit()}
+                                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleIdentitySubmit()}
                                 autoFocus
                             />
                         </div>
@@ -131,7 +131,7 @@ const IdentityModal: React.FC<IdentityModalProps> = ({ onClose }) => {
                                 placeholder={t('step2_placeholder')}
                                 value={habitName}
                                 onChange={(e) => setHabitName(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleHabitSubmit()}
+                                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleHabitSubmit()}
                                 autoFocus
                             />
                             <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 ml-1">

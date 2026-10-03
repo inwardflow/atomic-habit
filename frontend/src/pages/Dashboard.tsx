@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../services/authService';
-import { Plus, MessageSquare, LogOut, BarChart2, Heart, Moon, Sun, Bell, BellOff, Settings } from 'lucide-react';
+import { Plus, MessageSquare, LogOut, BarChart2, Heart, Moon, Sun, Bell, BellOff, Settings, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useHabits } from '../hooks/useHabits';
@@ -161,6 +161,13 @@ const Dashboard = () => {
                 <BarChart2 className="w-4 h-4" />
                 <span className="hidden sm:inline">{t('nav.analytics')}</span>
               </Link>
+              <Link
+                to="/coach"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
+              >
+                <Bot className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('nav.coach')}</span>
+              </Link>
               <Link 
                 to="/settings" 
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
@@ -212,7 +219,7 @@ const Dashboard = () => {
                         onChange={(e) => setGratitude(e.target.value)}
                         placeholder={t('placeholder', { ns: 'gratitude_jar' })}
                         className="flex-1 border-0 bg-slate-50 dark:bg-slate-900/50 rounded-lg px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-all"
-                        onKeyDown={(e) => e.key === 'Enter' && handleGratitudeSubmit()}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleGratitudeSubmit()}
                     />
                     <button 
                         onClick={handleGratitudeSubmit}
@@ -296,6 +303,7 @@ const Dashboard = () => {
       {/* Floating Chat Button */}
       <button
         onClick={() => setShowChat(!showChat)}
+        aria-label={t('nav.coach')}
         className="fixed bottom-8 right-8 p-4 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 z-50 group"
       >
         <MessageSquare className="w-6 h-6 group-hover:animate-pulse" />

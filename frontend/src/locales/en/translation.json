@@ -139,7 +139,9 @@
       "tired": "Tired",
       "sad": "Sad",
       "anxious": "Anxious",
-      "frustrated": "Frustrated"
+      "frustrated": "Frustrated",
+      "angry": "Angry",
+      "gratitude": "Grateful"
     }
   },
   "settings": {
@@ -159,6 +161,7 @@
       "title": "Preferences",
       "subtitle": "Customize your experience",
       "language": "Language",
+      "languageHint": "Interface language; the AI Coach greets you in it too",
       "theme": "Theme",
       "darkMode": "Dark mode",
       "lightMode": "Light mode",
@@ -241,10 +244,19 @@
       "identityPlaceholder": "e.g., I am a writer",
       "submit": "Start My Journey",
       "success": "Registration successful! Please login.",
-      "failed": "Registration failed"
+      "failed": "Registration failed",
+      "welcome": "Welcome aboard! Your atomic habits journey starts now."
     },
     "haveAccount": "Already have an account?",
     "loginLink": "Login",
     "session_expired": "Session expired. Please login again."
+  },
+  "notifications": {
+    "unsupported": "This browser does not support notifications.",
+    "blocked": "Notifications are blocked by your browser settings.",
+    "enabled": "Notifications enabled.",
+    "welcome_body": "I will proactively check in with you.",
+    "not_granted": "Notification permission was not granted.",
+    "muted": "Notifications muted."
   }
 }

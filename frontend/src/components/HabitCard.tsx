@@ -96,7 +96,7 @@ const HabitCard: React.FC<HabitCardProps> = ({
                         className="w-full border border-indigo-200 dark:border-indigo-700 rounded px-2 py-1 text-lg font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white"
                         autoFocus
                         onBlur={handleSaveEdit}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSaveEdit()}
                     />
                 </div>
             ) : (

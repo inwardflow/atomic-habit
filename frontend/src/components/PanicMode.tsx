@@ -79,20 +79,29 @@ const PanicMode = () => {
   useEffect(() => {
     if (!isOpen || mode !== 'breathe') return;
     
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
     const cycle = () => {
       setText(t('breathe.inhale'));
-      setTimeout(() => {
-        setText(t('breathe.hold'));
-        setTimeout(() => {
-          setText(t('breathe.exhale'));
-        }, 4000);
-      }, 4000);
+      timeouts.push(setTimeout(() => setText(t('breathe.hold')), 4000));
+      timeouts.push(setTimeout(() => setText(t('breathe.exhale')), 8000));
     };
-    
+
     cycle();
     const interval = setInterval(cycle, 12000); // 4-4-4 breathing box
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      timeouts.forEach(clearTimeout); // don't update state after closing mid-cycle
+    };
   }, [isOpen, mode, t]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen]);
 
   return (
     <>
@@ -120,8 +129,9 @@ const PanicMode = () => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-sky-50/95 dark:bg-slate-900/95 backdrop-blur-sm z-[100] flex flex-col items-center justify-center p-6"
           >
-            <button 
+            <button
                 onClick={() => setIsOpen(false)}
+                aria-label={t('close', { defaultValue: 'Close' })}
                 className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
                 <X size={32} />

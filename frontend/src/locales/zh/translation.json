@@ -139,7 +139,9 @@
       "tired": "疲惫",
       "sad": "难过",
       "anxious": "焦虑",
-      "frustrated": "受挫"
+      "frustrated": "受挫",
+      "angry": "生气",
+      "gratitude": "感恩"
     }
   },
   "settings": {
@@ -159,6 +161,7 @@
       "title": "偏好设置",
       "subtitle": "自定义您的体验",
       "language": "语言",
+      "languageHint": "界面语言，AI 教练也会用该语言问候你",
       "theme": "主题",
       "darkMode": "深色模式",
       "lightMode": "浅色模式",
@@ -241,10 +244,19 @@
       "identityPlaceholder": "例如：我是一名作家",
       "submit": "开启旅程",
       "success": "注册成功！请登录。",
-      "failed": "注册失败"
+      "failed": "注册失败",
+      "welcome": "注册成功，欢迎开启你的原子习惯之旅！"
     },
     "haveAccount": "已有账户？",
     "loginLink": "登录",
     "session_expired": "会话已过期，请重新登录。"
+  },
+  "notifications": {
+    "unsupported": "当前浏览器不支持通知。",
+    "blocked": "通知已被浏览器设置阻止。",
+    "enabled": "通知已开启。",
+    "welcome_body": "我会主动来关心你的进展。",
+    "not_granted": "未获得通知权限。",
+    "muted": "通知已静音。"
   }
 }
