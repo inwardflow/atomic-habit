@@ -5,7 +5,7 @@
 - 
 
 ## Validation
-- [ ] Backend tests (`mvn -f backend/pom.xml test`)
+- [ ] Backend tests (`cd backend && ./mvnw verify`)
 - [ ] Frontend lint (`npm --prefix frontend run lint`)
 - [ ] Frontend build (`npm --prefix frontend run build`)
 
@@ -13,5 +13,5 @@
 
 ## Checklist
 - [ ] No secrets committed
-- [ ] Documentation updated
+- [ ] Documentation updated (README / CHANGELOG)
 - [ ] Scope is focused and backward-compatible

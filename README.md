@@ -1,7 +1,7 @@
 
 # Atomic Habit: An AI-Powered Habit Tracker for a Kinder, More Consistent You
 
-[![CI](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml/badge.svg)](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml) [![LICENSE](https://img.shields.io/github/license/inwardflow/atomic-habit)](https://github.com/inwardflow/atomic-habit/blob/main/LICENSE)
+[![CI](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml/badge.svg)](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml) [![LICENSE](https://img.shields.io/github/license/inwardflow/atomic-habit)](https://github.com/inwardflow/atomic-habit/blob/master/LICENSE)
 
 **Atomic Habit** is a full-stack, open-source habit tracking application built on the principles of James Clear's book of the same name. It's designed to be a powerful, yet gentle tool for building a better life, one tiny habit at a time.
 
@@ -41,15 +41,15 @@ This application is more than just a to-do list. It's a comprehensive system for
 This project is built with a modern, robust, and scalable technology stack.
 
 **Backend:**
-*   **Framework**: Spring Boot 3.2.5 (Java 17)
+*   **Framework**: Spring Boot 3.5 (Java 17)
 *   **AI Integration**: [AgentScope](https://github.com/modelscope/agentscope) for creating and managing AI agents.
 *   **API**: RESTful API with SSE (Server-Sent Events) for real-time AI chat streaming.
 *   **Authentication**: JWT-based security with Spring Security.
-*   **Database**: JPA/Hibernate with MySQL (production) and H2 (local development).
-*   **Build**: Maven
+*   **Database**: JPA/Hibernate with PostgreSQL (production) and H2 (local development).
+*   **Build**: Maven (via the bundled Maven Wrapper), JaCoCo for coverage
 
 **Frontend:**
-*   **Framework**: React 18 with Vite
+*   **Framework**: React 19 with Vite
 *   **Language**: TypeScript
 *   **Styling**: TailwindCSS for a utility-first CSS workflow.
 *   **State Management**: Zustand for simple, scalable state management.
@@ -57,12 +57,13 @@ This project is built with a modern, robust, and scalable technology stack.
 *   **UI Components**: Lucide Icons, Framer Motion for animations.
 
 **AI Service:**
-*   Designed to be compatible with any OpenAI-compatible API endpoint.
-*   Currently configured and tested with **SiliconFlow** (`Qwen/Qwen2.5-72B-Instruct`).
+*   Works with any OpenAI-compatible chat-completions endpoint that supports tool calling.
+*   Defaults to **SiliconFlow** (`deepseek-ai/DeepSeek-V3.2`); also tested with Alibaba Cloud Qwen (`qwen3.8-flash`).
+*   Model calls are non-streaming on the server side, because some providers emit malformed streamed tool-call deltas.
 
 **Deployment:**
 *   **Containerization**: Docker & Docker Compose for easy local and production setup.
-*   **CI/CD**: GitHub Actions for automated testing and builds.
+*   **CI/CD**: GitHub Actions for tests, coverage, Docker image builds, CodeQL scanning and dependency review.
 
 ## 🚀 Getting Started
 
@@ -73,7 +74,7 @@ Follow these instructions to get the project running on your local machine for d
 Make sure you have the following software installed:
 
 *   **Java 17+** (We recommend [SDKMAN!](https://sdkman.io/) for managing Java versions)
-*   **Maven 3.9+** (For building the backend)
+*   **Maven** is optional; use the bundled wrapper (`./mvnw`)
 *   **Node.js 20+** (We recommend [nvm](https://github.com/nvm-sh/nvm) for managing Node.js versions)
 *   **Docker & Docker Compose** (For the easiest, most consistent setup)
 
@@ -98,9 +99,10 @@ Now, open the `.env` file and fill in the required values. **At a minimum, you m
 | ----------------------------- | --------------------------------------------------------------------------- |
 | `AGENTSCOPE_MODEL_API_KEY`    | **Required.** Your API key from an OpenAI-compatible service (e.g., SiliconFlow). |
 | `AGENTSCOPE_MODEL_BASE_URL`   | The base URL of the AI service. Defaults to SiliconFlow.                    |
-| `AGENTSCOPE_MODEL_NAME` | The specific model to use. Defaults to `Qwen/Qwen2.5-72B-Instruct`.         |
-| `SPRING_JWT_SECRET`           | A long, random string for signing authentication tokens.                    |
-| `SPRING_DATASOURCE_URL`       | The JDBC URL for your database. Defaults to a local MySQL instance.         |
+| `AGENTSCOPE_MODEL_NAME`       | The specific model to use. Defaults to `deepseek-ai/DeepSeek-V3.2`.         |
+| `AGENTSCOPE_PROXY_ENABLED` / `_HOST` / `_PORT` | Optional HTTP proxy used only for AI model calls.   |
+| `SPRING_JWT_SECRET`           | **Required in `prod`.** Base64/hex secret of at least 32 bytes, e.g. `openssl rand -hex 32`. The app refuses to start without it. |
+| `SPRING_DATASOURCE_URL`       | The JDBC URL for your database (PostgreSQL in Docker Compose).              |
 | `SPRING_DATASOURCE_USERNAME`  | Database username.                                                          |
 | `SPRING_DATASOURCE_PASSWORD`  | Database password.                                                          |
 
@@ -112,7 +114,7 @@ This is the simplest way to get the full stack running.
 docker compose up --build
 ```
 
-The application will be available at `http://localhost:5173`.
+The application will be available at `http://localhost`, and the API at `http://localhost:8080`.
 
 ### 4. Manual Local Development (Without Docker)
 
@@ -122,9 +124,9 @@ If you prefer to run the services manually:
 ```bash
 # From the project root
 cd backend
-mvn spring-boot:run
+./mvnw spring-boot:run      # Windows: mvnw.cmd spring-boot:run
 ```
-The backend API will be running on `http://localhost:8080`.
+The backend API will be running on `http://localhost:8080` (Swagger UI at `/swagger-ui.html`). The `dev` profile uses an in-memory H2 database, so no setup is needed.
 
 **Run the Frontend:**
 ```bash
@@ -135,11 +137,23 @@ npm run dev
 ```
 The frontend will be available at `http://localhost:5173`.
 
+### 5. Run the Tests
+
+```bash
+cd backend
+./mvnw verify                 # unit + integration tests, coverage report in target/site/jacoco/
+```
+
+```bash
+npm --prefix frontend run lint
+npm --prefix frontend run build
+```
+
 ## 🤝 Contributing
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-Please see `CONTRIBUTING.md` for details on our code of conduct and the process for submitting pull requests to us.
+Please see `CONTRIBUTING.md` for details, and `CHANGELOG.md` for notable changes on our code of conduct and the process for submitting pull requests to us.
 
 ## 📜 License
 
