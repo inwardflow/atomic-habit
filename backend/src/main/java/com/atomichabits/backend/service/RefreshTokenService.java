@@ -96,13 +96,18 @@ public class RefreshTokenService {
         }
 
         RefreshToken oldToken = optionalToken.get();
+        Long userId = oldToken.getUser().getId();
         String deviceId = oldToken.getDeviceId();
-        
-        // Invalidate old token
-        refreshTokenRepository.delete(oldToken);
-        
+
+        // Invalidate old token. Only the request that actually deletes the row may rotate;
+        // a concurrent request with the same token loses cleanly instead of failing with an
+        // optimistic-locking 500.
+        if (refreshTokenRepository.deleteByIdAndCount(oldToken.getId()) == 0) {
+            throw new TokenRefreshException(token, "Refresh token was already used.");
+        }
+
         // Create new token for same user, preserving deviceId
-        return createRefreshToken(oldToken.getUser().getId(), ipAddress, deviceInfo, deviceId);
+        return createRefreshToken(userId, ipAddress, deviceInfo, deviceId);
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {

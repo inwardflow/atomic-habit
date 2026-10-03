@@ -3,7 +3,7 @@ package com.atomichabits.backend.controller;
 import com.atomichabits.backend.dto.AuthResponse;
 import com.atomichabits.backend.dto.LoginRequest;
 import com.atomichabits.backend.dto.RegisterRequest;
-import com.atomichabits.backend.model.LoginHistory;
+import com.atomichabits.backend.dto.LoginHistoryResponse;
 import com.atomichabits.backend.repository.LoginHistoryRepository;
 import com.atomichabits.backend.service.AuthService;
 import com.atomichabits.backend.service.RefreshTokenService;
@@ -93,7 +93,7 @@ public class AuthController {
 
     
     @GetMapping("/login-history")
-    public ResponseEntity<java.util.List<LoginHistory>> getLoginHistory(HttpServletRequest request) {
+    public ResponseEntity<java.util.List<LoginHistoryResponse>> getLoginHistory(HttpServletRequest request) {
         String refreshToken = getCookieValue(request, "refresh_token");
         
         if (refreshToken == null) {
@@ -104,7 +104,8 @@ public class AuthController {
                 .map(token -> {
                     // Get latest 10 login records
                     org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, 10);
-                    return ResponseEntity.ok(loginHistoryRepository.findByUserIdOrderByLoginTimeDesc(token.getUser().getId(), pageable).getContent());
+                    return ResponseEntity.ok(loginHistoryRepository.findByUserIdOrderByLoginTimeDesc(token.getUser().getId(), pageable)
+                            .map(LoginHistoryResponse::from).getContent());
                 })
                 .orElse(ResponseEntity.badRequest().build());
     }

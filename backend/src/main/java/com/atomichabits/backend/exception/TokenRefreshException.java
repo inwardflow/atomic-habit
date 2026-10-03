@@ -11,7 +11,11 @@ public class TokenRefreshException extends RuntimeException {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * @param token the offending refresh token; intentionally not included in the message so it
+     *              never reaches logs or API responses
+     */
     public TokenRefreshException(String token, String message) {
-        super(String.format("Failed for [%s]: %s", token, message));
+        super(message);
     }
 }

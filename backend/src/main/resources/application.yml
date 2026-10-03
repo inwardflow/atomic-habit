@@ -9,6 +9,9 @@ spring:
   messages:
     basename: i18n/messages
     encoding: UTF-8
+    # Use messages.properties (English) for unsupported locales instead of the server's OS locale;
+    # otherwise an English request on a Chinese host gets Chinese messages.
+    fallback-to-system-locale: false
   jackson:
     serialization:
       write-dates-as-timestamps: false
