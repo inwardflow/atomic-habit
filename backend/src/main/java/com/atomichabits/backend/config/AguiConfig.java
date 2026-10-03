@@ -2,6 +2,7 @@ package com.atomichabits.backend.config;
 
 import com.atomichabits.backend.agent.CoachTools;
 import com.atomichabits.backend.agent.CoachLongTermMemory;
+import com.atomichabits.backend.service.ChatModelFactory;
 import io.agentscope.spring.boot.agui.common.AguiAgentRegistryCustomizer;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.Agent;
@@ -9,28 +10,20 @@ import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.memory.LongTermMemoryMode;
 import io.agentscope.core.model.OpenAIChatModel;
 import io.agentscope.core.tool.Toolkit;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AguiConfig {
 
-    @Value("${agentscope.model.api-key}")
-    private String apiKey;
-
-    @Value("${agentscope.model.model-name}")
-    private String modelName;
-
-    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
-    private String baseUrl;
-
     private final CoachTools coachTools;
     private final CoachLongTermMemory coachLongTermMemory;
+    private final ChatModelFactory chatModelFactory;
 
-    public AguiConfig(CoachTools coachTools, CoachLongTermMemory coachLongTermMemory) {
+    public AguiConfig(CoachTools coachTools, CoachLongTermMemory coachLongTermMemory, ChatModelFactory chatModelFactory) {
         this.coachTools = coachTools;
         this.coachLongTermMemory = coachLongTermMemory;
+        this.chatModelFactory = chatModelFactory;
     }
 
     @Bean
@@ -45,27 +38,10 @@ public class AguiConfig {
                 .tool(coachTools)
                 .apply();
 
-        // Configure HTTP transport with explicit timeouts
-        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
-                .connectTimeout(java.time.Duration.ofSeconds(30))
-                .readTimeout(java.time.Duration.ofMinutes(3))
-                .writeTimeout(java.time.Duration.ofSeconds(30))
-                .build();
-        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
-                .config(transportConfig)
-                .build();
-
-        // Initialize Model
-        OpenAIChatModel model = OpenAIChatModel.builder()
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .baseUrl(baseUrl)
-                .httpTransport(httpTransport)
-                // Some provider/model combinations emit malformed streaming tool events,
-                // which breaks @ag-ui/client verification and surfaces as "Connection failed".
-                // Disable model-level streaming so AG-UI can emit a stable event sequence.
-                .stream(false)
-                .build();
+        // Some provider/model combinations emit malformed streaming tool events,
+        // which breaks @ag-ui/client verification and surfaces as "Connection failed".
+        // Disable model-level streaming so AG-UI can emit a stable event sequence.
+        OpenAIChatModel model = chatModelFactory.create(false);
 
         // Initialize Agent
         return ReActAgent.builder()

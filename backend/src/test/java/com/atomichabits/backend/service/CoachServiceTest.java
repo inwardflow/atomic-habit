@@ -101,7 +101,8 @@ class CoachServiceTest {
 
         when(promptProperties.getWeeklyReviewUser()).thenReturn("User Prompt");
         when(promptProperties.getWeeklyReviewSystem()).thenReturn("System Prompt");
-        when(agentScopeClient.call(anyString(), anyString(), eq(true))).thenReturn("AI disabled (tests).");
+        // The weekly review relies on the present_weekly_review tool, so CoachTools must be registered.
+        when(agentScopeClient.callAsUser(eq(email), anyString(), anyString(), same(coachTools))).thenReturn("AI disabled (tests).");
 
         // Act
         // Note: usage of AgentScope might fail if not properly mocked or configured.

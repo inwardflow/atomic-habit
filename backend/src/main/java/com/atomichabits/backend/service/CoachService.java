@@ -37,6 +37,13 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class CoachService {
+    static final String TOOL_IDENTITY_RULE = """
+
+            TOOL IDENTITY RULE:
+            - The user is already signed in. For any tool with an `email` parameter, pass an empty string;
+              the server resolves the current user automatically. Never ask the user for their email.
+            """;
+
     private static final Pattern CODE_BLOCK_PATTERN = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
     private static final Pattern SUGGESTION_SENTENCE_PATTERN = Pattern.compile("([^.!?]+[.!?])");
 
@@ -92,7 +99,7 @@ public class CoachService {
         // Save user message
         saveMessage(email, "user", userMessage);
 
-        String aiResponse = agentScopeClient.call((!context.isEmpty() ? "Context:\n" + context + "\nUser Message: " : "") + userMessage, systemPrompt, coachTools);
+        String aiResponse = callCoach(email, (!context.isEmpty() ? "Context:\n" + context + "\nUser Message: " : "") + userMessage, systemPrompt);
 
         // Save AI response
         saveMessage(email, "ai", aiResponse);
@@ -135,7 +142,7 @@ public class CoachService {
         String systemPrompt = promptProperties.getGreetingSystem();
 
         // Only save if we get a valid response (which callAgent handles)
-        String aiResponse = agentScopeClient.call("Context:\n" + context + "\n\n" + userPrompt, systemPrompt, coachTools);
+        String aiResponse = callCoach(email, "Context:\n" + context + "\n\n" + userPrompt, systemPrompt);
         saveMessage(email, "ai", aiResponse);
         return aiResponse;
     }
@@ -261,7 +268,7 @@ public class CoachService {
         String systemPrompt = promptProperties.getWeeklyReviewSystem();
 
         saveMessage(email, "user", "Start Weekly Review");
-        String aiResponse = agentScopeClient.call("Context:\n" + context + "\n\n" + userPrompt, systemPrompt, true);
+        String aiResponse = callCoach(email, "Context:\n" + context + "\n\n" + userPrompt, systemPrompt);
         saveMessage(email, "ai", aiResponse);
 
         saveWeeklyReviewRecord(email, stats, aiResponse);
@@ -470,6 +477,14 @@ public class CoachService {
         // Use a shorter fallback if system prompt is missing (though it shouldn't be)
         if (systemPrompt == null) systemPrompt = "You are a helpful habit coach. Send a short reminder.";
 
-        return agentScopeClient.call("Context:\n" + context + "\n\n" + userPrompt, systemPrompt, coachTools);
+        return callCoach(email, "Context:\n" + context + "\n\n" + userPrompt, systemPrompt);
+    }
+
+    /**
+     * Calls the model with {@link CoachTools} registered. The tools resolve the signed-in user on the
+     * server, so the model is told not to ask for an email (it otherwise treats the param as required).
+     */
+    private String callCoach(String email, String userMessage, String systemPrompt) {
+        return agentScopeClient.callAsUser(email, userMessage, systemPrompt + TOOL_IDENTITY_RULE, coachTools);
     }
 }

@@ -48,7 +48,8 @@ agentscope:
   enabled: ${AGENTSCOPE_ENABLED:true}
   agui:
     path-prefix: /agui
-    cors-enabled: true
+    # CORS is handled centrally by SecurityConfig (app.cors.allowed-origins).
+    cors-enabled: false
     server-side-memory: true
     sse-timeout: ${AGENTSCOPE_SSE_TIMEOUT:300000}
     run-timeout: ${AGENTSCOPE_RUN_TIMEOUT:5m}
