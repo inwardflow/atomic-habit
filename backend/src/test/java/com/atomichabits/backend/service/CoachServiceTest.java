@@ -62,6 +62,9 @@ class CoachServiceTest {
     @Mock
     private MemoryService memoryService;
 
+    @Mock
+    private org.springframework.context.MessageSource messageSource;
+
     @InjectMocks
     private CoachService coachService;
 

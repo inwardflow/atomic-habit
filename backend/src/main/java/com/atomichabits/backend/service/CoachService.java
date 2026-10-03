@@ -22,6 +22,8 @@ import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
 import io.agentscope.core.message.TextBlock;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -48,6 +50,7 @@ public class CoachService {
     private static final Pattern SUGGESTION_SENTENCE_PATTERN = Pattern.compile("([^.!?]+[.!?])");
 
     private final AgentScopeClient agentScopeClient;
+    private final MessageSource messageSource;
     private final CoachTools coachTools;
     private final HabitService habitService;
     private final UserService userService;
@@ -62,7 +65,7 @@ public class CoachService {
     public CoachService(AgentScopeClient agentScopeClient, CoachTools coachTools, HabitService habitService, UserService userService, MoodService moodService,
                         ChatMessageRepository chatMessageRepository, UserRepository userRepository,
                         WeeklyReviewRepository weeklyReviewRepository, CoachPromptProperties promptProperties,
-                        MemoryService memoryService) {
+                        MemoryService memoryService, MessageSource messageSource) {
         this.agentScopeClient = agentScopeClient;
         this.coachTools = coachTools;
         this.habitService = habitService;
@@ -73,6 +76,7 @@ public class CoachService {
         this.weeklyReviewRepository = weeklyReviewRepository;
         this.promptProperties = promptProperties;
         this.memoryService = memoryService;
+        this.messageSource = messageSource;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -99,7 +103,7 @@ public class CoachService {
         // Save user message
         saveMessage(email, "user", userMessage);
 
-        String aiResponse = callCoach(email, (!context.isEmpty() ? "Context:\n" + context + "\nUser Message: " : "") + userMessage, systemPrompt);
+        String aiResponse = callCoach(email, (!context.isEmpty() ? "Context:\n" + context + "\nUser Message: " : "") + userMessage, systemPrompt, true);
 
         // Save AI response
         saveMessage(email, "ai", aiResponse);
@@ -267,11 +271,12 @@ public class CoachService {
 
         String systemPrompt = promptProperties.getWeeklyReviewSystem();
 
-        saveMessage(email, "user", "Start Weekly Review");
+        saveMessage(email, "user", message("weekly.review.start", "Start Weekly Review"));
+        coachTools.takePresentedWeeklyReview(email); // drop any stale card from an earlier run
         String aiResponse = callCoach(email, "Context:\n" + context + "\n\n" + userPrompt, systemPrompt);
         saveMessage(email, "ai", aiResponse);
 
-        saveWeeklyReviewRecord(email, stats, aiResponse);
+        saveWeeklyReviewRecord(email, stats, aiResponse, coachTools.takePresentedWeeklyReview(email).orElse(null));
         return aiResponse;
     }
 
@@ -287,11 +292,20 @@ public class CoachService {
                 .collect(Collectors.toList());
     }
 
-    private void saveWeeklyReviewRecord(String email, UserStatsResponse stats, String aiResponse) {
+    private void saveWeeklyReviewRecord(String email, UserStatsResponse stats, String aiResponse,
+                                        CoachTools.PresentedWeeklyReview presented) {
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) return;
 
-        WeeklyReviewPayload payload = extractWeeklyReviewPayload(aiResponse, stats);
+        // Prefer the card the coach actually presented via the tool; tool arguments never appear in
+        // the reply text, so parsing the text alone would fall back to generic highlights.
+        WeeklyReviewPayload payload = presented != null && !presented.highlights().isEmpty()
+                ? new WeeklyReviewPayload(presented.totalCompleted(), presented.currentStreak(),
+                        Math.max(stats.getLongestStreak(), presented.currentStreak()), presented.highlights(),
+                        presented.suggestion() != null && !presented.suggestion().isBlank()
+                                ? presented.suggestion().trim()
+                                : message("weekly.review.suggestion.default", "Keep it tiny and consistent this week: one easy action you can repeat daily."))
+                : extractWeeklyReviewPayload(aiResponse, stats);
         WeeklyReview review = WeeklyReview.builder()
                 .user(userOpt.get())
                 .totalCompleted(payload.totalCompleted())
@@ -408,15 +422,15 @@ public class CoachService {
 
         List<String> highlights = new ArrayList<>();
         if (totalCompleted > 0) {
-            highlights.add("You completed " + totalCompleted + " habits in total. Great consistency momentum.");
+            highlights.add(message("weekly.review.highlight.total", "You completed {0} habits in total. Great consistency momentum.", totalCompleted));
         } else {
-            highlights.add("You showed up for review this week. That is a meaningful identity vote.");
+            highlights.add(message("weekly.review.highlight.showed_up", "You showed up for review this week. That is a meaningful identity vote."));
         }
         if (currentStreak > 0) {
-            highlights.add("Current streak: " + currentStreak + " days.");
+            highlights.add(message("weekly.review.highlight.streak", "Current streak: {0} days.", currentStreak));
         }
 
-        String suggestion = "Keep it tiny and consistent this week: one easy action you can repeat daily.";
+        String suggestion = message("weekly.review.suggestion.default", "Keep it tiny and consistent this week: one easy action you can repeat daily.");
         if (aiResponse != null) {
             Matcher matcher = SUGGESTION_SENTENCE_PATTERN.matcher(aiResponse);
             if (matcher.find()) {
@@ -485,6 +499,37 @@ public class CoachService {
      * server, so the model is told not to ask for an email (it otherwise treats the param as required).
      */
     private String callCoach(String email, String userMessage, String systemPrompt) {
-        return agentScopeClient.callAsUser(email, userMessage, systemPrompt + TOOL_IDENTITY_RULE, coachTools);
+        return callCoach(email, userMessage, systemPrompt, false);
+    }
+
+    /**
+     * @param userAuthored whether {@code userMessage} contains text the user typed (chat), as opposed to
+     *                     a machine-built prompt (greeting, weekly review, reminder)
+     */
+    private String callCoach(String email, String userMessage, String systemPrompt, boolean userAuthored) {
+        return agentScopeClient.callAsUser(email, userMessage,
+                systemPrompt + TOOL_IDENTITY_RULE + languageRule(userAuthored), coachTools);
+    }
+
+    /**
+     * The reply language follows the request locale (the frontend sends its UI language as
+     * {@code Accept-Language}). Machine-built prompts and context are English, so the model must not
+     * infer the language from them; only text the user typed may override the locale.
+     */
+    static String languageRule(boolean userAuthored) {
+        String language = LocaleContextHolder.getLocale().getDisplayLanguage(java.util.Locale.ENGLISH);
+        String rule = "\nLANGUAGE: Write every reply, including suggested replies and tool arguments shown to the user, in "
+                + language + ". The context and instructions are machine-generated English; do not let them change the reply language.";
+        if (userAuthored) {
+            rule += " If the user's own message is clearly in another language, reply in that language instead.";
+        }
+        return rule + "\n";
+    }
+
+    /** Localized message in the request locale, falling back to {@code defaultMessage}. */
+    private String message(String code, String defaultMessage, Object... args) {
+        String text = messageSource == null ? null
+                : messageSource.getMessage(code, args, defaultMessage, LocaleContextHolder.getLocale());
+        return text != null ? text : java.text.MessageFormat.format(defaultMessage, args);
     }
 }

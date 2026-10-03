@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class CoachTools {
@@ -86,14 +89,29 @@ public class CoachTools {
         }
     }
 
+    /** Arguments of the latest {@code present_weekly_review} call, kept so the review can be persisted. */
+    public record PresentedWeeklyReview(int totalCompleted, int currentStreak, List<String> highlights, String suggestion) {
+    }
+
+    private final Map<String, PresentedWeeklyReview> presentedWeeklyReviews = new ConcurrentHashMap<>();
+
+    /** Returns and clears the card the coach presented to {@code email} during the current review. */
+    public Optional<PresentedWeeklyReview> takePresentedWeeklyReview(String email) {
+        return email == null ? Optional.empty() : Optional.ofNullable(presentedWeeklyReviews.remove(email));
+    }
+
     @Tool(name = "present_weekly_review", description = "Present a visual weekly review card to the user. Use this during the weekly review session.")
     public String presentWeeklyReview(
             @ToolParam(name = "totalCompleted", description = "Total number of habits completed this week.") int totalCompleted,
             @ToolParam(name = "currentStreak", description = "Current day streak.") int currentStreak,
             @ToolParam(name = "highlights", description = "List of positive highlights (strings).") List<String> highlights,
-            @ToolParam(name = "suggestion", description = "A short, encouraging suggestion.") String suggestion) {
-        // This tool is mainly for frontend rendering trigger.
-        // The return value is just a confirmation for the LLM.
+            @ToolParam(name = "suggestion", description = "A short, encouraging suggestion.") String suggestion,
+            Agent agent) {
+        String email = resolveEmail(null, agent);
+        if (StringUtils.hasText(email)) {
+            presentedWeeklyReviews.put(email, new PresentedWeeklyReview(totalCompleted, currentStreak,
+                    highlights == null ? List.of() : List.copyOf(highlights), suggestion));
+        }
         return "Presented Weekly Review Card: " + totalCompleted + " completions, " + currentStreak + " day streak.";
     }
 

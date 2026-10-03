@@ -1,7 +1,12 @@
 package com.atomichabits.backend.config;
 
 import com.atomichabits.backend.agent.CoachTools;
+import com.atomichabits.backend.agent.AgentUserRegistry;
 import com.atomichabits.backend.agent.CoachLongTermMemory;
+import com.atomichabits.backend.agent.TrackingThreadSessionManager;
+import com.atomichabits.backend.model.User;
+import com.atomichabits.backend.repository.UserRepository;
+import com.atomichabits.backend.security.AguiThreadBindingFilter;
 import com.atomichabits.backend.service.ChatModelFactory;
 import io.agentscope.spring.boot.agui.common.AguiAgentRegistryCustomizer;
 import io.agentscope.core.ReActAgent;
@@ -19,11 +24,33 @@ public class AguiConfig {
     private final CoachTools coachTools;
     private final CoachLongTermMemory coachLongTermMemory;
     private final ChatModelFactory chatModelFactory;
+    private final AgentUserRegistry agentUserRegistry;
+    private final UserRepository userRepository;
 
-    public AguiConfig(CoachTools coachTools, CoachLongTermMemory coachLongTermMemory, ChatModelFactory chatModelFactory) {
+    public AguiConfig(CoachTools coachTools, CoachLongTermMemory coachLongTermMemory, ChatModelFactory chatModelFactory,
+                      AgentUserRegistry agentUserRegistry, UserRepository userRepository) {
         this.coachTools = coachTools;
         this.coachLongTermMemory = coachLongTermMemory;
         this.chatModelFactory = chatModelFactory;
+        this.agentUserRegistry = agentUserRegistry;
+        this.userRepository = userRepository;
+    }
+
+    /**
+     * Resolves the user for the agent being created from its thread id, which
+     * {@link com.atomichabits.backend.security.AguiThreadBindingFilter} pins to {@code user-<id>}.
+     */
+    private String resolveCreatingUserEmail() {
+        String threadId = TrackingThreadSessionManager.creatingThreadId();
+        if (threadId == null || !threadId.startsWith(AguiThreadBindingFilter.THREAD_PREFIX)) {
+            return null;
+        }
+        try {
+            long userId = Long.parseLong(threadId.substring(AguiThreadBindingFilter.THREAD_PREFIX.length()));
+            return userRepository.findById(userId).map(User::getEmail).orElse(null);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Bean
@@ -43,8 +70,10 @@ public class AguiConfig {
         // Disable model-level streaming so AG-UI can emit a stable event sequence.
         OpenAIChatModel model = chatModelFactory.create(false);
 
+        String email = resolveCreatingUserEmail();
+
         // Initialize Agent
-        return ReActAgent.builder()
+        ReActAgent agent = ReActAgent.builder()
                 .name("AtomicCoach")
                 .sysPrompt("""
                         You are an expert AI Coach based on James Clear's 'Atomic Habits'.
@@ -81,6 +110,7 @@ public class AguiConfig {
                         - Keep the plan small (3-5 habits), practical, and anxiety-friendly.
 
                         STYLE RULES:
+                        - Reply in the same language as the user's latest message (including quick replies).
                         - Keep responses concise (usually <= 3 sentences outside JSON).
                         - No shaming language.
                         - Encourage "start small" and consistency over intensity.
@@ -93,8 +123,12 @@ public class AguiConfig {
                 .model(model)
                 .toolkit(toolkit)
                 .memory(new InMemoryMemory())
-                .longTermMemory(coachLongTermMemory)
+                .longTermMemory(email != null ? coachLongTermMemory.forUser(email) : coachLongTermMemory)
                 .longTermMemoryMode(LongTermMemoryMode.STATIC_CONTROL)
                 .build();
+        if (email != null) {
+            agentUserRegistry.bind(agent, email);
+        }
+        return agent;
     }
 }
