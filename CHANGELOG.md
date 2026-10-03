@@ -75,6 +75,9 @@ First tagged release.
   also lacked dark-mode styles, showed duplicate greetings, and squeezed the chat under an always-open
   review history.
 - Analytics: the 30-day series omitted days without completions, so charts interpolated over misses.
+- Memory and weekly-review date labels used the server's locale ("10月 03" for English users); they
+  now follow the request language. The analytics quote rendered with doubled quotation marks, and the
+  dark-mode heatmap levels were nearly invisible.
 - Identity header duplicated "I am" ("我是 I am a…"); pages kept the previous page's scroll position;
   pressing Enter to confirm an IME candidate sent half-typed Chinese text; notification toasts and the
   settings language hint were untranslated; registration used a blocking `alert()` and forced a second
@@ -91,6 +94,7 @@ First tagged release.
   graceful shutdown.
 
 ### Added
+- README screenshots (dashboard, AI Coach, weekly review, habits, analytics, Panic Mode, dark mode).
 - Flyway migrations (`V1__init.sql`, `V2__index_foreign_keys.sql`) with tests that run them on a real
   PostgreSQL 15 (embedded, no Docker needed), validate them against the JPA entities, and cover the
   baseline upgrade path for pre-Flyway databases.

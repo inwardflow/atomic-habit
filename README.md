@@ -5,6 +5,10 @@
 
 **Atomic Habit** is a full-stack, open-source habit tracking application built on the principles of James Clear's book of the same name. It's designed to be a powerful, yet gentle tool for building a better life, one tiny habit at a time.
 
+<p align="center">
+  <img src="docs/images/dashboard.png" width="900" alt="Dashboard: identity statement with level and XP, day streak and small-wins counters, earned badges, and a 90-day consistency heatmap">
+</p>
+
 ---
 
 ## The Philosophy: Why Another Habit Tracker?
@@ -35,6 +39,35 @@ This application is more than just a to-do list. It's a comprehensive system for
 | **🔔 Notification System**  | Gentle, configurable reminders to help you stay on track without being intrusive.                                                       |
 | **🧘 Panic Mode**          | An anxiety-friendly feature that guides you through breathing exercises and grounding techniques when you feel overwhelmed.                 |
 | **👁️ Agent Visualization**  | See exactly what the AI Coach is doing in real-time (Thinking, Calling Tools, Reading Memory), providing transparency and building trust. |
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/coach.png" alt="AI Coach chat: the coach logs a tired mood and presents a Daily Focus card with a two-minute action, next to the remembered user profile"></td>
+    <td width="50%"><img src="docs/images/weekly-review.png" alt="Weekly review card with completions, day streak, highlights and a coach's note"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>AI Coach</b>: tool-using agent with long-term memory and visual cards</td>
+    <td align="center"><b>Compassionate Weekly Review</b>: focus on the gain, not the gap</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/habits.png" alt="Identity journeys and daily habit cards with streaks, two-minute versions, implementation intentions and habit stacks"></td>
+    <td><img src="docs/images/analytics.png" alt="Analytics: mood and habit correlation, mood distribution and a 30-day consistency chart"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Identity Journeys &amp; Daily Habits</b>: 2-minute rule, cues and habit stacking</td>
+    <td align="center"><b>Analytics</b>: mood/habit correlation and consistency rhythm</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/panic-mode.png" alt="Panic Mode: guided breathing circle with grounding exercise and rain sounds"></td>
+    <td><img src="docs/images/dark-mode.png" alt="Dashboard in dark mode"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Panic Mode</b>: guided breathing and grounding when overwhelmed</td>
+    <td align="center"><b>Dark mode</b> and English / 中文 UI</td>
+  </tr>
+</table>
 
 ## 🛠️ Tech Stack
 
