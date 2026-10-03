@@ -23,8 +23,11 @@ updates:
       jjwt:
         patterns: ["io.jsonwebtoken:*"]
     ignore:
-      # Spring Boot 4 is a major migration (Jackson 3, Spring Framework 7); track it in a dedicated PR.
+      # Major migrations are done deliberately in dedicated PRs, not by Dependabot:
+      # Spring Boot 4 (Jackson 3, Spring Framework 7) and AgentScope 2 (docs/agentscope-2-migration.md).
       - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "io.agentscope:*"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
