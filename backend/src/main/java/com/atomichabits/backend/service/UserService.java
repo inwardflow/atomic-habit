@@ -89,6 +89,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public AdvancedUserStatsResponse getAdvancedStats(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
