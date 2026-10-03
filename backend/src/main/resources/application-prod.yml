@@ -7,6 +7,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  security:
+    jwt:
+      # No fallback in production: refuse to start without an explicit secret.
+      secret: ${SPRING_JWT_SECRET}
   h2:
     console:
       enabled: false
