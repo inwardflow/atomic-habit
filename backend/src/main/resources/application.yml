@@ -18,6 +18,9 @@ spring:
     time-zone: UTC
   jpa:
     open-in-view: false
+  # dev/test use an in-memory H2 schema managed by Hibernate; prod enables Flyway.
+  flyway:
+    enabled: false
 
 management:
   endpoints:
