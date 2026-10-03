@@ -1,5 +1,6 @@
 package com.atomichabits.backend.controller;
 
+import org.springframework.context.i18n.LocaleContextHolder;
 import com.atomichabits.backend.service.CoachService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -44,9 +45,9 @@ public class CoachController {
                         .expiresAt(m.getExpiresAt())
                         .formattedDate(
                                 m.getReferenceDate() != null
-                                        ? m.getReferenceDate().format(DateTimeFormatter.ofPattern("MMM dd"))
+                                        ? m.getReferenceDate().format(DateTimeFormatter.ofPattern("MMM dd", LocaleContextHolder.getLocale()))
                                         : (m.getCreatedAt() != null
-                                        ? m.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd"))
+                                        ? m.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd", LocaleContextHolder.getLocale()))
                                         : "")
                         )
                         .build())

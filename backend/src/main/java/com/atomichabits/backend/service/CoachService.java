@@ -329,7 +329,7 @@ public class CoachService {
                 .suggestion(review.getSuggestion())
                 .createdAt(review.getCreatedAt())
                 .formattedDate(review.getCreatedAt() != null
-                        ? review.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd"))
+                        ? review.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd", LocaleContextHolder.getLocale()))
                         : "")
                 .build();
     }
