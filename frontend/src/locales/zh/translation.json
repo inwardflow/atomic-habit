@@ -220,7 +220,8 @@
       "delete_confirm_password": "请输入密码以确认",
       "delete_success": "账户已删除。再见！",
       "delete_error": "删除账户失败"
-    }
+    },
+    "releaseNotes": "更新日志"
   },
   "auth": {
     "login": {

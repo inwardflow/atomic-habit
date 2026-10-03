@@ -6,6 +6,7 @@ body:
     attributes:
       value: |
         Thanks for reporting. Please fill the fields below.
+        Security issues: please report privately via the Security tab instead (see SECURITY.md).
   - type: input
     id: summary
     attributes:
@@ -35,6 +36,23 @@ body:
       label: Actual Behavior
     validations:
       required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown at the bottom of Settings, or the image tag / release you deployed.
+      placeholder: e.g. 0.1.0 or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How are you running it?
+      options:
+        - Docker Compose
+        - Prebuilt GHCR images
+        - Local development (mvnw + npm)
+        - Other
   - type: input
     id: environment
     attributes:

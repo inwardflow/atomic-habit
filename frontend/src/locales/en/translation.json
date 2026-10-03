@@ -220,7 +220,8 @@
       "delete_confirm_password": "Please enter your password to confirm",
       "delete_success": "Account deleted. Goodbye!",
       "delete_error": "Failed to delete account"
-    }
+    },
+    "releaseNotes": "Release notes"
   },
   "auth": {
     "login": {

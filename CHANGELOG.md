@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-03
+
+First tagged release.
+
+### Upgrade notes
+- **`SPRING_JWT_SECRET` is required** with the `prod` profile (Base64/hex, at least 32 bytes, e.g.
+  `openssl rand -hex 32`); the application refuses to start without it.
+- **Database schema is now managed by Flyway** in `prod`. Existing databases created by
+  `ddl-auto=update` are baselined at version 1 automatically and only receive the new index migration;
+  fresh databases are created from `V1__init.sql`. docker-compose now defaults
+  `SPRING_JPA_HIBERNATE_DDL_AUTO` to `validate`; remove any `update` override you set.
+- **Everyone is signed out once** after upgrading, because refresh tokens are now stored hashed.
+- Access tokens are no longer accepted in the `?token=` query parameter; send
+  `Authorization: Bearer <token>`.
+- `AGENTSCOPE_BASE_URL` in docker-compose was renamed to the variable the app actually reads,
+  `AGENTSCOPE_MODEL_BASE_URL`.
+
 ### Security
 - JWTs signed with an unknown key are now rejected as unauthenticated. Previously the
   `SignatureException` escaped the authentication filter.
@@ -21,6 +38,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   client-supplied message metadata.
 - `GET /api/auth/login-history` returned JPA entities (with the owning `User`); it now returns a DTO.
 - Refresh-token errors no longer echo the raw token into logs and responses.
+- Refresh tokens are 256-bit random values and only their SHA-256 hash is stored, so a database leak
+  cannot be replayed as live sessions.
+- Access tokens are accepted only in the `Authorization` header (no `?token=` query parameter, which
+  leaked into access/proxy logs); the notification stream now uses a fetch-based SSE client.
+- SECURITY.md pointed at an unroutable `.local` mailbox; reports now go through GitHub private
+  vulnerability reporting.
 
 ### Fixed
 - The REST AI Coach (chat, greeting, weekly review, reminders) registered **no tools**: the varargs
@@ -59,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Spring Boot 3.2.2 → 3.5.16, jjwt 0.11.5 → 0.13.0, springdoc 2.3.0 → 2.8.17,
+  AgentScope 1.0.11 → 1.0.12 (final 1.x; see `docs/agentscope-2-migration.md` for the 2.x plan),
   maven-enforcer-plugin 3.5.0 → 3.6.2.
 - AI model settings are bound once into `AiModelProperties` and built by a shared `ChatModelFactory`,
   replacing duplicated `@Value` fields.
@@ -67,9 +91,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   graceful shutdown.
 
 ### Added
+- Flyway migrations (`V1__init.sql`, `V2__index_foreign_keys.sql`) with tests that run them on a real
+  PostgreSQL 15 (embedded, no Docker needed), validate them against the JPA entities, and cover the
+  baseline upgrade path for pre-Flyway databases.
+- Release automation (`.github/workflows/release.yml`, `RELEASING.md`): tag-triggered build, tests,
+  GitHub Release with jar/frontend bundle/`SHA256SUMS`, multi-arch images on GHCR, and build
+  provenance attestations.
+- Version and build time at `/actuator/info`; app version and release-notes link in Settings;
+  reproducible build timestamps.
 - Maven Wrapper (`backend/mvnw`), so contributors don't need a local Maven install.
 - JaCoCo coverage reports (`./mvnw verify` → `target/site/jacoco/`), uploaded as a CI artifact.
 - CI runs for the `development` branch, uploads Surefire reports on failure and builds both Docker images.
 - CodeQL scanning for Java and TypeScript.
 - Grouped Dependabot updates, plus Dockerfile base-image updates.
-- Regression tests for every fix above (64 backend tests in total).
+- Regression tests for every fix above.
+
+[Unreleased]: https://github.com/inwardflow/atomic-habit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/inwardflow/atomic-habit/releases/tag/v0.1.0

@@ -1,7 +1,7 @@
 
 # Atomic Habit: An AI-Powered Habit Tracker for a Kinder, More Consistent You
 
-[![CI](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml/badge.svg)](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml) [![LICENSE](https://img.shields.io/github/license/inwardflow/atomic-habit)](https://github.com/inwardflow/atomic-habit/blob/master/LICENSE)
+[![CI](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml/badge.svg)](https://github.com/inwardflow/atomic-habit/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/inwardflow/atomic-habit?sort=semver)](https://github.com/inwardflow/atomic-habit/releases) [![CodeQL](https://github.com/inwardflow/atomic-habit/actions/workflows/codeql.yml/badge.svg)](https://github.com/inwardflow/atomic-habit/actions/workflows/codeql.yml) [![LICENSE](https://img.shields.io/github/license/inwardflow/atomic-habit)](https://github.com/inwardflow/atomic-habit/blob/master/LICENSE)
 
 **Atomic Habit** is a full-stack, open-source habit tracking application built on the principles of James Clear's book of the same name. It's designed to be a powerful, yet gentle tool for building a better life, one tiny habit at a time.
 
@@ -45,7 +45,7 @@ This project is built with a modern, robust, and scalable technology stack.
 *   **AI Integration**: [AgentScope](https://github.com/modelscope/agentscope) for creating and managing AI agents.
 *   **API**: RESTful API with SSE (Server-Sent Events) for real-time AI chat streaming.
 *   **Authentication**: JWT-based security with Spring Security.
-*   **Database**: JPA/Hibernate with PostgreSQL (production) and H2 (local development).
+*   **Database**: JPA/Hibernate with PostgreSQL (production, schema managed by Flyway migrations in `backend/src/main/resources/db/migration`) and H2 (local development).
 *   **Build**: Maven (via the bundled Maven Wrapper), JaCoCo for coverage
 
 **Frontend:**
@@ -116,6 +116,18 @@ docker compose up --build
 
 The application will be available at `http://localhost`, and the API at `http://localhost:8080`.
 
+#### Using prebuilt images
+
+Each release publishes multi-arch images to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/inwardflow/atomic-habit-backend:0.1.0
+docker pull ghcr.io/inwardflow/atomic-habit-frontend:0.1.0
+```
+
+Upgrading an existing deployment? Read the **Upgrade notes** of the target version in
+[`CHANGELOG.md`](CHANGELOG.md) first.
+
 ### 4. Manual Local Development (Without Docker)
 
 If you prefer to run the services manually:
@@ -153,7 +165,12 @@ npm --prefix frontend run build
 
 Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
-Please see `CONTRIBUTING.md` for details, and `CHANGELOG.md` for notable changes on our code of conduct and the process for submitting pull requests to us.
+Please see [`CONTRIBUTING.md`](CONTRIBUTING.md) for our code of conduct and the pull request process. Further reading:
+
+*   [`CHANGELOG.md`](CHANGELOG.md): notable changes and upgrade notes per release
+*   [`RELEASING.md`](RELEASING.md): how releases are cut and how to verify artifacts
+*   [`docs/agentscope-2-migration.md`](docs/agentscope-2-migration.md): the planned AgentScope 2 upgrade
+*   [`SECURITY.md`](SECURITY.md): reporting vulnerabilities
 
 ## 📜 License
 
