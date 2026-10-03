@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A valid token for a deleted user is treated as anonymous instead of causing a server error.
 - The `prod` profile refuses to start without `SPRING_JWT_SECRET`, and weak (< 256-bit) secrets
   fail at startup instead of on first login.
+- The AG-UI `threadId` was chosen by the client and trusted for tool calls, so any signed-in user
+  could act on another user's data or resume their conversation by sending `user-<id>`. The server
+  now pins every AG-UI run to the authenticated user's thread, and long-term memory no longer trusts
+  client-supplied message metadata.
+- `GET /api/auth/login-history` returned JPA entities (with the owning `User`); it now returns a DTO.
+- Refresh-token errors no longer echo the raw token into logs and responses.
 
 ### Fixed
 - The REST AI Coach (chat, greeting, weekly review, reminders) registered **no tools**: the varargs
@@ -31,6 +37,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docker-compose set `AGENTSCOPE_BASE_URL`, but the app reads `AGENTSCOPE_MODEL_BASE_URL`.
 - The AI proxy setting now applies only to model HTTP calls and to both coach paths, instead of
   mutating JVM-wide system properties on every request.
+- **Reloading any page logged the user out**: concurrent refresh calls (React StrictMode, several tabs,
+  parallel 401s) reused a rotated refresh token and failed with a 500. Rotation is now race-safe
+  (the loser gets 401) and the frontend shares a single in-flight refresh.
+- AI Coach (streaming): tools failed with "not authenticated", raw tool calls/results were rendered as
+  JSON bubbles, the activity timeline stayed on "Connecting…", the conversation was wiped on every
+  token refresh and not restored after a reload, and quick replies in ```` ```replies ```` fences were
+  shown as raw arrays. The floating chat crashed the run on tool-only messages and did not refresh the
+  dashboard after the coach changed data.
+- Weekly review cards were saved with generic English highlights instead of the card the coach
+  presented; replies now follow the UI language (`Accept-Language`), and an English request on a
+  Chinese host no longer gets Chinese messages (`fallback-to-system-locale: false`).
+- The full AI Coach page was unreachable from the UI (no navigation link) and had no way back; it
+  also lacked dark-mode styles, showed duplicate greetings, and squeezed the chat under an always-open
+  review history.
+- Analytics: the 30-day series omitted days without completions, so charts interpolated over misses.
+- Identity header duplicated "I am" ("我是 I am a…"); pages kept the previous page's scroll position;
+  pressing Enter to confirm an IME candidate sent half-typed Chinese text; notification toasts and the
+  settings language hint were untranslated; registration used a blocking `alert()` and forced a second
+  login; Panic Mode leaked timers and could not be closed with Escape.
 
 ### Changed
 - Spring Boot 3.2.2 → 3.5.16, jjwt 0.11.5 → 0.13.0, springdoc 2.3.0 → 2.8.17,
@@ -47,4 +72,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI runs for the `development` branch, uploads Surefire reports on failure and builds both Docker images.
 - CodeQL scanning for Java and TypeScript.
 - Grouped Dependabot updates, plus Dockerfile base-image updates.
-- Regression tests for every fix above (57 backend tests in total).
+- Regression tests for every fix above (64 backend tests in total).
