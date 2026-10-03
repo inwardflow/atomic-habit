@@ -55,13 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
-        
-        // Support token in query parameter for SSE
-        String tokenParam = request.getParameter("token");
-        if (StringUtils.hasText(tokenParam)) {
-            return tokenParam;
-        }
-        
+        // Tokens are accepted only in the Authorization header: query parameters end up in access
+        // logs, proxy logs and browser history.
         return null;
     }
 }
