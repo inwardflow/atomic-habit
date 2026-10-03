@@ -1,13 +1,17 @@
 package com.atomichabits.backend.security;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Date;
 
@@ -27,13 +31,22 @@ public class JwtTokenProvider {
     @Value("${spring.security.jwt.expiration}")
     private int jwtExpirationMs;
 
-    private Key key() {
+    /**
+     * Fails fast at startup if the configured secret is too weak for HS256,
+     * instead of surfacing a {@code WeakKeyException} on the first login.
+     */
+    @PostConstruct
+    void validateSecret() {
+        key();
+    }
+
+    private SecretKey key() {
         byte[] keyBytes;
         try {
             keyBytes = Base64.getDecoder().decode(jwtSecret);
         } catch (IllegalArgumentException e) {
             // Fallback: treat the secret as a plain UTF-8 string.
-            keyBytes = jwtSecret.getBytes();
+            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         }
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -48,34 +61,31 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(key(), SignatureAlgorithm.HS256)
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key(), Jwts.SIG.HS256)
                 .compact();
     }
 
     public String getUserNameFromJwtToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key())
+        return Jwts.parser()
+                .verifyWith(key())
                 .build()
-                .parseClaimsJws(token)
-                .getBody()
+                .parseSignedClaims(token)
+                .getPayload()
                 .getSubject();
     }
 
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(authToken);
+            Jwts.parser().verifyWith(key()).build().parseSignedClaims(authToken);
             return true;
         } catch (ExpiredJwtException e) {
-            log.warn("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            log.warn("JWT token is unsupported: {}", e.getMessage());
-        } catch (MalformedJwtException e) {
-            log.warn("JWT token is malformed: {}", e.getMessage());
-        } catch (SecurityException e) {
-            log.warn("JWT signature validation failed: {}", e.getMessage());
+            log.debug("JWT token is expired: {}", e.getMessage());
+        } catch (JwtException e) {
+            // Covers malformed, unsupported and bad-signature tokens.
+            log.warn("Invalid JWT token: {}", e.getMessage());
         } catch (IllegalArgumentException e) {
             log.warn("JWT claims string is empty: {}", e.getMessage());
         }
