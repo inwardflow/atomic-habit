@@ -1,5 +1,6 @@
 package com.atomichabits.backend.security;
 
+import com.atomichabits.backend.support.TestKeys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -8,8 +9,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtTokenProviderTest {
 
-    private static final String SECRET = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
-    private static final String OTHER_SECRET = "5A7134743777217A25432A462D4A614E645267556B58703273357638792F423F";
+    private static final String SECRET = TestKeys.randomHs256Secret();
+    private static final String OTHER_SECRET = TestKeys.randomHs256Secret();
 
     private JwtTokenProvider provider;
 

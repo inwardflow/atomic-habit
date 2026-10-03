@@ -1,6 +1,7 @@
 package com.atomichabits.backend.integration;
 
 import com.atomichabits.backend.security.JwtTokenProvider;
+import com.atomichabits.backend.support.TestKeys;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -114,7 +115,7 @@ class SecurityIntegrationTest {
     void tokenWithForgedSignatureIsRejectedNotServerError() throws Exception {
         // Valid structure and claims, but signed with a key the server does not know.
         JwtTokenProvider attacker = new JwtTokenProvider();
-        ReflectionTestUtils.setField(attacker, "jwtSecret", "5A7134743777217A25432A462D4A614E645267556B58703273357638792F423F");
+        ReflectionTestUtils.setField(attacker, "jwtSecret", TestKeys.randomHs256Secret());
         ReflectionTestUtils.setField(attacker, "jwtExpirationMs", 60_000);
         String forged = attacker.generateTokenFromUsername("victim@example.com");
 

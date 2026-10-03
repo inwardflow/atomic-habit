@@ -42,6 +42,9 @@ First tagged release.
   cannot be replayed as live sessions.
 - Access tokens are accepted only in the `Authorization` header (no `?token=` query parameter, which
   leaked into access/proxy logs); the notification stream now uses a fetch-based SSE client.
+- No signing keys are committed anymore: the publicly known development JWT default was replaced by a
+  random per-start key (set `SPRING_JWT_SECRET` to keep tokens across restarts), and tests generate
+  their keys at runtime.
 - SECURITY.md pointed at an unroutable `.local` mailbox; reports now go through GitHub private
   vulnerability reporting.
 
