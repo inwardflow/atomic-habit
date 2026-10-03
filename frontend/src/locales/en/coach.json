@@ -1,5 +1,6 @@
 {
   "title": "AI Coach",
+  "back_to_dashboard": "Back to dashboard",
   "weekly_review": "Weekly Review",
   "weekly_review_history": "Weekly Review History",
   "start_chatting": "Start chatting with your Atomic Habits Coach!",
@@ -129,5 +130,9 @@
       "search_memory": "Searching memory",
       "save_memory": "Saving to memory"
     }
+  },
+  "roles": {
+    "user": "You",
+    "assistant": "Coach"
   }
 }

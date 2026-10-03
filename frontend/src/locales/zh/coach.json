@@ -1,5 +1,6 @@
 {
   "title": "AI 教练",
+  "back_to_dashboard": "返回仪表盘",
   "weekly_review": "周复盘",
   "weekly_review_history": "周复盘历史",
   "start_chatting": "开始与你的原子习惯教练聊天吧！",
@@ -129,5 +130,9 @@
       "search_memory": "搜索记忆",
       "save_memory": "保存记忆"
     }
+  },
+  "roles": {
+    "user": "你",
+    "assistant": "教练"
   }
 }

@@ -31,7 +31,7 @@ const DailyFocusCard: React.FC<DailyFocusCardProps> = ({ habitName, twoMinuteVer
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border-2 border-blue-100 overflow-hidden max-w-md w-full transform transition-all hover:scale-[1.01]">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border-2 border-blue-100 dark:border-blue-900 overflow-hidden max-w-md w-full transform transition-all hover:scale-[1.01]">
       <div className="bg-blue-600 p-4 text-white">
         <h3 className="font-bold text-lg flex items-center gap-2">
           <Target className="w-5 h-5 text-blue-200" />
@@ -42,9 +42,9 @@ const DailyFocusCard: React.FC<DailyFocusCardProps> = ({ habitName, twoMinuteVer
       
       <div className="p-6 text-center space-y-4">
         <div>
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{t('card.focus.mission')}</div>
-            <div className="text-2xl font-bold text-gray-800">{twoMinuteVersion}</div>
-            <div className="text-sm text-gray-500 mt-1">({habitName})</div>
+            <div className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-1">{t('card.focus.mission')}</div>
+            <div className="text-2xl font-bold text-gray-800 dark:text-slate-100">{twoMinuteVersion}</div>
+            <div className="text-sm text-gray-500 dark:text-slate-400 mt-1">({habitName})</div>
         </div>
 
         <div className="pt-4">
@@ -55,7 +55,7 @@ const DailyFocusCard: React.FC<DailyFocusCardProps> = ({ habitName, twoMinuteVer
                 <CheckCircle2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 {t('card.focus.did_it')}
             </button>
-            <p className="text-xs text-gray-400 mt-3">
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-3">
                 {t('card.focus.worry')}
             </p>
         </div>

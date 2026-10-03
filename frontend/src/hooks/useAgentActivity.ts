@@ -18,6 +18,8 @@ const INITIAL_ACTIVITY: AgentActivity = {
 export function useAgentActivity() {
   const [activity, setActivity] = useState<AgentActivity>(INITIAL_ACTIVITY);
   const startTimeRef = useRef<number>(0);
+  // TOOL_CALL_END / TOOL_CALL_RESULT carry only the call id, so remember id -> tool name.
+  const toolNamesByIdRef = useRef<Map<string, string>>(new Map());
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startTimer = useCallback(() => {
@@ -91,7 +93,7 @@ export function useAgentActivity() {
 
       switch (type) {
         case 'RUN_STARTED':
-          startTimer();
+          toolNamesByIdRef.current.clear();
           setPhase('thinking');
           break;
 
@@ -118,6 +120,9 @@ export function useAgentActivity() {
             setPhase('reading_memory');
           }
 
+          if (typeof event.toolCallId === 'string') {
+            toolNamesByIdRef.current.set(event.toolCallId, toolName);
+          }
           addToolCall(toolName, toolArgs);
           break;
         }
@@ -128,6 +133,7 @@ export function useAgentActivity() {
             event.toolCallName ||
             event.name ||
             (toolCall && toolCall.name) ||
+            (typeof event.toolCallId === 'string' ? toolNamesByIdRef.current.get(event.toolCallId) : '') ||
             ''
           ) as string;
           if (endToolName) {
@@ -166,7 +172,7 @@ export function useAgentActivity() {
           break;
       }
     },
-    [addToolCall, completeToolCall, setPhase, startTimer],
+    [addToolCall, completeToolCall, setPhase],
   );
 
   /**
