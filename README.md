@@ -154,8 +154,8 @@ The application will be available at `http://localhost`, and the API at `http://
 Each release publishes multi-arch images to GitHub Container Registry:
 
 ```bash
-docker pull ghcr.io/inwardflow/atomic-habit-backend:0.1.0
-docker pull ghcr.io/inwardflow/atomic-habit-frontend:0.1.0
+docker pull ghcr.io/inwardflow/atomic-habit-backend:0.1.1
+docker pull ghcr.io/inwardflow/atomic-habit-frontend:0.1.1
 ```
 
 Upgrading an existing deployment? Read the **Upgrade notes** of the target version in

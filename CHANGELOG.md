@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-05
+
+First published release. Same application as 0.1.0; read the 0.1.0 upgrade notes below.
+
+### Fixed
+- Release images could not be built for `linux/arm64`: the backend runtime image
+  `eclipse-temurin:17-jre-alpine` is published for amd64 only. It now uses `eclipse-temurin:17-jre-noble`
+  (Ubuntu, multi-arch), and both images compile on the build platform instead of under emulation.
+- CI now builds the Docker images for every published platform, so this is caught before a release.
+
 ## [0.1.0] - 2026-10-03
 
-First tagged release.
+Tagged, but not published: the release workflow failed while building the arm64 backend image, so no
+GitHub Release or container images exist for this version. Use 0.1.1.
 
 ### Upgrade notes
 - **`SPRING_JWT_SECRET` is required** with the `prod` profile (Base64/hex, at least 32 bytes, e.g.
@@ -113,5 +124,6 @@ First tagged release.
 - Grouped Dependabot updates, plus Dockerfile base-image updates.
 - Regression tests for every fix above.
 
-[Unreleased]: https://github.com/inwardflow/atomic-habit/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/inwardflow/atomic-habit/releases/tag/v0.1.0
+[Unreleased]: https://github.com/inwardflow/atomic-habit/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/inwardflow/atomic-habit/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/inwardflow/atomic-habit/tree/v0.1.0

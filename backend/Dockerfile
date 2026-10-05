@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+# The jar is platform-independent: build it once on the runner's native platform, even for
+# multi-arch images (avoids compiling under QEMU emulation).
+FROM --platform=$BUILDPLATFORM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
 COPY pom.xml .
@@ -8,16 +10,17 @@ RUN mvn -B dependency:go-offline
 COPY src ./src
 RUN mvn -B clean package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine
+# Ubuntu-based JRE: the Alpine variant is published for linux/amd64 only, which broke arm64 images.
+FROM eclipse-temurin:17-jre-noble
 WORKDIR /app
 
 # Install curl for healthcheck
-RUN apk add --no-cache curl
+RUN apt-get update     && apt-get install -y --no-install-recommends curl     && rm -rf /var/lib/apt/lists/*
 
 # Add a volume pointing to /tmp
 VOLUME /tmp
 
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN groupadd --system spring && useradd --system --gid spring --no-create-home --shell /usr/sbin/nologin spring
 COPY --from=build /app/target/*.jar app.jar
 
 USER spring:spring
