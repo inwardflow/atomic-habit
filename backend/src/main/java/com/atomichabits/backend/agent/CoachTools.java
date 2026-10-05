@@ -19,6 +19,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class CoachTools {
@@ -30,32 +33,40 @@ public class CoachTools {
     private final MemoryService memoryService;
     private final UserRepository userRepository;
     private final TrackingThreadSessionManager threadSessionManager;
+    private final AgentUserRegistry agentUserRegistry;
 
     public CoachTools(UserService userService,
                       HabitService habitService,
                       MoodService moodService,
                       MemoryService memoryService,
                       UserRepository userRepository,
-                      TrackingThreadSessionManager threadSessionManager) {
+                      TrackingThreadSessionManager threadSessionManager,
+                      AgentUserRegistry agentUserRegistry) {
         this.userService = userService;
         this.habitService = habitService;
         this.moodService = moodService;
         this.memoryService = memoryService;
         this.userRepository = userRepository;
         this.threadSessionManager = threadSessionManager;
+        this.agentUserRegistry = agentUserRegistry;
     }
 
-    private String resolveEmail(String email, Agent agent) {
-        if (StringUtils.hasText(email)) {
-            return email.trim();
-        }
-
+    /**
+     * Resolves the user a tool call acts for from server-side state only: the request's security
+     * context, the REST agent binding, or the AG-UI thread. The model-supplied {@code email} argument
+     * is deliberately ignored so a prompt-injected address cannot target another user's data.
+     */
+    String resolveEmail(String email, Agent agent) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated()) {
             String principal = authentication.getName();
             if (StringUtils.hasText(principal) && !"anonymousUser".equalsIgnoreCase(principal)) {
                 return principal;
             }
+        }
+        String bound = agentUserRegistry.findEmail(agent);
+        if (StringUtils.hasText(bound)) {
+            return bound;
         }
         return resolveEmailFromAgentThread(agent);
     }
@@ -78,20 +89,35 @@ public class CoachTools {
         }
     }
 
+    /** Arguments of the latest {@code present_weekly_review} call, kept so the review can be persisted. */
+    public record PresentedWeeklyReview(int totalCompleted, int currentStreak, List<String> highlights, String suggestion) {
+    }
+
+    private final Map<String, PresentedWeeklyReview> presentedWeeklyReviews = new ConcurrentHashMap<>();
+
+    /** Returns and clears the card the coach presented to {@code email} during the current review. */
+    public Optional<PresentedWeeklyReview> takePresentedWeeklyReview(String email) {
+        return email == null ? Optional.empty() : Optional.ofNullable(presentedWeeklyReviews.remove(email));
+    }
+
     @Tool(name = "present_weekly_review", description = "Present a visual weekly review card to the user. Use this during the weekly review session.")
     public String presentWeeklyReview(
             @ToolParam(name = "totalCompleted", description = "Total number of habits completed this week.") int totalCompleted,
             @ToolParam(name = "currentStreak", description = "Current day streak.") int currentStreak,
             @ToolParam(name = "highlights", description = "List of positive highlights (strings).") List<String> highlights,
-            @ToolParam(name = "suggestion", description = "A short, encouraging suggestion.") String suggestion) {
-        // This tool is mainly for frontend rendering trigger.
-        // The return value is just a confirmation for the LLM.
+            @ToolParam(name = "suggestion", description = "A short, encouraging suggestion.") String suggestion,
+            Agent agent) {
+        String email = resolveEmail(null, agent);
+        if (StringUtils.hasText(email)) {
+            presentedWeeklyReviews.put(email, new PresentedWeeklyReview(totalCompleted, currentStreak,
+                    highlights == null ? List.of() : List.copyOf(highlights), suggestion));
+        }
         return "Presented Weekly Review Card: " + totalCompleted + " completions, " + currentStreak + " day streak.";
     }
 
     @Tool(name = "complete_habit", description = "Mark a habit as completed for today. Use this when the user says they finished a habit.")
     public String completeHabit(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             @ToolParam(name = "habitName", description = "The name of the habit to complete.") String habitName,
             Agent agent) {
         try {
@@ -127,7 +153,7 @@ public class CoachTools {
 
     @Tool(name = "log_mood", description = "Log the user's current mood. Use this when the user explicitly expresses a feeling (e.g., 'I am tired', 'I feel great').")
     public String logMood(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             @ToolParam(name = "moodType", description = "The type of mood. Allowed values: MOTIVATED, FOCUSED, HAPPY, NEUTRAL, TIRED, SAD, ANXIOUS, ANGRY, GRATITUDE.") String moodType,
             @ToolParam(name = "note", description = "A short note or reason for the mood (optional).") String note,
             Agent agent) {
@@ -147,7 +173,7 @@ public class CoachTools {
 
     @Tool(name = "get_user_status", description = "Get the user's current habit status, recent moods, and identity. Use this to understand the user's context.")
     public String getUserStatus(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             Agent agent) {
         StringBuilder context = new StringBuilder();
         try {
@@ -195,7 +221,7 @@ public class CoachTools {
 
     @Tool(name = "get_user_memory_context", description = "Get the user's saved long-term memory context including stable facts, behavior insights, and daily summaries.")
     public String getUserMemoryContext(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             Agent agent) {
         String resolvedEmail = resolveEmail(email, agent);
         if (!StringUtils.hasText(resolvedEmail)) {
@@ -206,7 +232,7 @@ public class CoachTools {
 
     @Tool(name = "save_user_insight", description = "Save a concise behavioral insight about the user. Use when user reveals preferences, obstacles, motivation, or routines.")
     public String saveUserInsight(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             @ToolParam(name = "insight", description = "A concise, reusable user insight in one sentence.") String insight,
             Agent agent) {
         String resolvedEmail = resolveEmail(email, agent);
@@ -219,7 +245,7 @@ public class CoachTools {
 
     @Tool(name = "save_long_term_fact", description = "Save a durable user fact that is likely stable over time, such as schedule constraints or preferred coaching style.")
     public String saveLongTermFact(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             @ToolParam(name = "fact", description = "A durable fact in one sentence.") String fact,
             Agent agent) {
         String resolvedEmail = resolveEmail(email, agent);
@@ -232,7 +258,7 @@ public class CoachTools {
 
     @Tool(name = "save_user_identity", description = "Save the user's desired identity statement (e.g., 'I am a runner'). Use this when the user confirms their identity goal.")
     public String saveUserIdentity(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             @ToolParam(name = "identity", description = "The identity statement.") String identity,
             Agent agent) {
         String resolvedEmail = resolveEmail(email, agent);
@@ -245,7 +271,7 @@ public class CoachTools {
 
     @Tool(name = "create_first_habit", description = "Create the user's first habit. Use this when the user agrees on a habit.")
     public String createFirstHabit(
-            @ToolParam(name = "email", description = "The user's email address. Optional when user is authenticated.") String email,
+            @ToolParam(name = "email", description = "Leave empty; the signed-in user is resolved by the server.") String email,
             @ToolParam(name = "habitName", description = "The name of the habit.") String habitName,
             @ToolParam(name = "twoMinuteVersion", description = "The 2-minute version of the habit.") String twoMinuteVersion,
             Agent agent) {

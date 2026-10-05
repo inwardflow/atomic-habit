@@ -9,12 +9,18 @@ spring:
   messages:
     basename: i18n/messages
     encoding: UTF-8
+    # Use messages.properties (English) for unsupported locales instead of the server's OS locale;
+    # otherwise an English request on a Chinese host gets Chinese messages.
+    fallback-to-system-locale: false
   jackson:
     serialization:
       write-dates-as-timestamps: false
     time-zone: UTC
   jpa:
     open-in-view: false
+  # dev/test use an in-memory H2 schema managed by Hibernate; prod enables Flyway.
+  flyway:
+    enabled: false
 
 management:
   endpoints:
@@ -28,7 +34,9 @@ management:
 # Default Security Configuration (can be overridden in profiles)
 spring.security:
   jwt:
-    secret: ${SPRING_JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    # Without SPRING_JWT_SECRET a random key is generated per start (fine for the in-memory dev
+    # database, which is also reset on restart). The prod profile requires the variable.
+    secret: ${SPRING_JWT_SECRET:${random.uuid}${random.uuid}}
     expiration: ${SPRING_JWT_EXPIRATION:900000} # 15 minutes
     refresh-expiration-ms: ${SPRING_JWT_REFRESH_EXPIRATION:604800000} # 7 days
 
@@ -48,7 +56,8 @@ agentscope:
   enabled: ${AGENTSCOPE_ENABLED:true}
   agui:
     path-prefix: /agui
-    cors-enabled: true
+    # CORS is handled centrally by SecurityConfig (app.cors.allowed-origins).
+    cors-enabled: false
     server-side-memory: true
     sse-timeout: ${AGENTSCOPE_SSE_TIMEOUT:300000}
     run-timeout: ${AGENTSCOPE_RUN_TIMEOUT:5m}

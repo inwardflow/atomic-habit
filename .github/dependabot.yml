@@ -5,12 +5,38 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      frontend-dev-tooling:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+      frontend-runtime:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
   - package-ecosystem: "maven"
     directory: "/backend"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    groups:
+      agentscope:
+        patterns: ["io.agentscope:*"]
+      jjwt:
+        patterns: ["io.jsonwebtoken:*"]
+    ignore:
+      # Major migrations are done deliberately in dedicated PRs, not by Dependabot:
+      # Spring Boot 4 (Jackson 3, Spring Framework 7) and AgentScope 2 (docs/agentscope-2-migration.md).
+      - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "io.agentscope:*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+  - package-ecosystem: "docker"
+    directories: ["/backend", "/frontend"]
     schedule:
       interval: "weekly"

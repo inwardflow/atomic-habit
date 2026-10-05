@@ -27,13 +27,13 @@ Our `README.md` has a comprehensive [Getting Started](README.md#🚀-getting-sta
 
 ### Pull Request Process
 
-1.  **Fork the repository** and create your branch from `main`.
+1.  **Fork the repository** and create your branch from `development` (or `master` for urgent fixes).
 2.  **Make your changes** in a separate git branch and write descriptive commit messages.
 3.  **Run all quality checks** before submitting your pull request.
 
     ```bash
-    # Run backend tests
-    mvn -f backend/pom.xml clean test
+    # Run backend tests and coverage (uses the bundled Maven Wrapper)
+    cd backend && ./mvnw clean verify && cd ..
 
     # Run frontend checks
     npm --prefix frontend install
@@ -41,13 +41,15 @@ Our `README.md` has a comprehensive [Getting Started](README.md#🚀-getting-sta
     npm --prefix frontend run build
     ```
 
-4.  **Open a Pull Request** to the `main` branch. Provide a clear description of the problem and solution. Include screenshots for any UI changes. Link to any relevant issues.
+4.  **Open a Pull Request** against `development`. Provide a clear description of the problem and solution. Include screenshots for any UI changes. Link to any relevant issues.
 5.  **Wait for review.** One of the project maintainers will review your PR, provide feedback, and merge it once it's ready.
 
 ### Coding Style
 
 *   **Follow existing conventions**: We use `.editorconfig` to maintain consistent coding styles. Please ensure your editor is configured to use it.
 *   **Write meaningful commit messages**: Follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
+*   **Test what you change**: Bug fixes should come with a regression test; new endpoints with an integration test.
+*   **Never commit secrets**: API keys, JWT secrets and passwords belong in your local `.env` (git-ignored), never in source or YAML defaults.
 *   **Keep it focused**: Avoid mixing unrelated changes in a single pull request. Create separate PRs for separate features or fixes.
 
 Thank you for your contribution!

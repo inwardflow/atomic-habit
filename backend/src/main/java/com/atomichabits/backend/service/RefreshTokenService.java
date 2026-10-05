@@ -11,10 +11,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Base64;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,16 +36,45 @@ public class RefreshTokenService {
     @Autowired
     private DeviceService deviceService;
 
-    public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenRepository.findByToken(token);
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    /**
+     * A newly issued refresh token: {@code value} goes to the client cookie and is never stored;
+     * the persisted entity only holds its SHA-256 hash.
+     */
+    public record IssuedToken(String value, RefreshToken entity) {
+    }
+
+    /**
+     * Refresh tokens are bearer credentials, so only their hash is stored: a leaked database dump
+     * (or backup) cannot be replayed as live sessions.
+     */
+    static String hash(String rawToken) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private static String newRawToken() {
+        byte[] bytes = new byte[32]; // 256 bits
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /** Looks up a session by the raw token presented in the cookie. */
+    public Optional<RefreshToken> findByToken(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            return Optional.empty();
+        }
+        return refreshTokenRepository.findByToken(hash(rawToken));
     }
     
-    public List<SessionDto> getUserSessions(Long userId, String currentToken) {
-        // Need to find the token itself to know which one is current, 
-        // but we pass the raw token string for comparison.
-        // Actually, we can just compare the token string if we have it.
-        // The token stored in DB is the raw UUID string.
-        
+    public List<SessionDto> getUserSessions(Long userId, String currentRawToken) {
+        String currentHash = currentRawToken == null ? null : hash(currentRawToken);
+        // Stored tokens are hashes, so compare against the hash of the presented token.
         User user = userRepository.findById(userId).orElseThrow();
         return refreshTokenRepository.findByUser(user).stream()
                 .map(token -> SessionDto.builder()
@@ -52,7 +86,7 @@ public class RefreshTokenService {
                         .deviceType(token.getDeviceType())
                         .location(token.getLocation())
                         .lastActive(token.getCreatedAt())
-                        .isCurrent(token.getToken().equals(currentToken))
+                        .isCurrent(token.getToken().equals(currentHash))
                         .build())
                 .collect(Collectors.toList());
     }
@@ -65,13 +99,14 @@ public class RefreshTokenService {
         });
     }
 
-    public RefreshToken createRefreshToken(Long userId, String ipAddress, String deviceInfo, String deviceId) {
+    public IssuedToken createRefreshToken(Long userId, String ipAddress, String deviceInfo, String deviceId) {
+        String rawToken = newRawToken();
         RefreshToken refreshToken = new RefreshToken();
 
         refreshToken.setUser(userRepository.findById(userId)
                 .orElseThrow(() -> new com.atomichabits.backend.exception.ResourceNotFoundException("User not found with id " + userId)));
         refreshToken.setExpiryDate(LocalDateTime.now().plusNanos(refreshTokenDurationMs * 1000000));
-        refreshToken.setToken(UUID.randomUUID().toString());
+        refreshToken.setToken(hash(rawToken));
         refreshToken.setIpAddress(ipAddress);
         refreshToken.setDeviceInfo(deviceInfo);
         refreshToken.setDeviceId(deviceId);
@@ -84,25 +119,30 @@ public class RefreshTokenService {
         refreshToken.setLocation(deviceService.getLocationFromIp(ipAddress));
 
         refreshToken = refreshTokenRepository.save(refreshToken);
-        return refreshToken;
+        return new IssuedToken(rawToken, refreshToken);
     }
     
     @Transactional
-    public RefreshToken rotate(String token, String ipAddress, String deviceInfo) {
-        Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(token);
+    public IssuedToken rotate(String token, String ipAddress, String deviceInfo) {
+        Optional<RefreshToken> optionalToken = findByToken(token);
         
         if (optionalToken.isEmpty()) {
             throw new TokenRefreshException(token, "Refresh token is not in database!");
         }
 
         RefreshToken oldToken = optionalToken.get();
+        Long userId = oldToken.getUser().getId();
         String deviceId = oldToken.getDeviceId();
-        
-        // Invalidate old token
-        refreshTokenRepository.delete(oldToken);
-        
+
+        // Invalidate old token. Only the request that actually deletes the row may rotate;
+        // a concurrent request with the same token loses cleanly instead of failing with an
+        // optimistic-locking 500.
+        if (refreshTokenRepository.deleteByIdAndCount(oldToken.getId()) == 0) {
+            throw new TokenRefreshException(token, "Refresh token was already used.");
+        }
+
         // Create new token for same user, preserving deviceId
-        return createRefreshToken(oldToken.getUser().getId(), ipAddress, deviceInfo, deviceId);
+        return createRefreshToken(userId, ipAddress, deviceInfo, deviceId);
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
@@ -114,8 +154,10 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public void deleteByToken(String token) {
-        refreshTokenRepository.deleteByToken(token);
+    public void deleteByToken(String rawToken) {
+        if (rawToken != null && !rawToken.isBlank()) {
+            refreshTokenRepository.deleteByToken(hash(rawToken));
+        }
     }
     
     @Transactional

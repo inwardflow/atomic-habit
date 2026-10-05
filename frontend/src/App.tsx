@@ -1,6 +1,6 @@
 import React, { Suspense, useEffect } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
@@ -27,6 +27,15 @@ const PageLoader = () => {
       </div>
     </div>
   );
+};
+
+/** Start each page at the top; the SPA otherwise keeps the previous page's scroll offset. */
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
 };
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -62,6 +71,7 @@ function App() {
   return (
     <ErrorBoundary>
     <Router>
+      <ScrollToTop />
       <Toaster position="top-right" />
       <Suspense fallback={<PageLoader />}>
         <Routes>

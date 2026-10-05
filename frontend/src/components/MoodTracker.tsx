@@ -124,7 +124,7 @@ const MoodTracker = () => {
                                 placeholder={t('mood.placeholder')}
                                 className="w-full bg-white dark:bg-slate-800 border-0 rounded-lg p-3 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 mb-3 resize-none h-20"
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                         e.preventDefault();
                                         handleSubmit();
                                     }

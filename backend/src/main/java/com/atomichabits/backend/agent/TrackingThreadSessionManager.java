@@ -10,7 +10,17 @@ import java.util.function.Supplier;
 
 public class TrackingThreadSessionManager extends ThreadSessionManager {
 
+    private static final ThreadLocal<String> CREATING_THREAD_ID = new ThreadLocal<>();
+
     private final Map<Agent, String> threadIdByAgent = Collections.synchronizedMap(new WeakHashMap<>());
+
+    /**
+     * The thread id whose agent is being created on the current thread, or {@code null}.
+     * Lets the agent factory (which receives no arguments) bind the new agent to its user.
+     */
+    public static String creatingThreadId() {
+        return CREATING_THREAD_ID.get();
+    }
 
     public TrackingThreadSessionManager(int maxSessions, int sessionTimeoutMinutes) {
         super(maxSessions, sessionTimeoutMinutes);
@@ -18,7 +28,14 @@ public class TrackingThreadSessionManager extends ThreadSessionManager {
 
     @Override
     public Agent getOrCreateAgent(String threadId, String agentId, Supplier<Agent> factory) {
-        Agent agent = super.getOrCreateAgent(threadId, agentId, factory);
+        Agent agent = super.getOrCreateAgent(threadId, agentId, () -> {
+            CREATING_THREAD_ID.set(threadId);
+            try {
+                return factory.get();
+            } finally {
+                CREATING_THREAD_ID.remove();
+            }
+        });
         if (agent != null) {
             threadIdByAgent.put(agent, threadId);
         }

@@ -94,11 +94,11 @@ public class AuthService {
                 refreshTokenService.deleteByUserIdAndDeviceInfo(user.getId(), userAgent);
             }
 
-            RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId(), ipAddress, userAgent, deviceId);
+            RefreshTokenService.IssuedToken refreshToken = refreshTokenService.createRefreshToken(user.getId(), ipAddress, userAgent, deviceId);
 
             recordLoginHistory(user, ipAddress, userAgent, "SUCCESS");
 
-            return new AuthResult(jwt, refreshToken.getToken());
+            return new AuthResult(jwt, refreshToken.value());
 
         } catch (Exception e) {
             userOpt.ifPresent(user -> recordLoginHistory(user, ipAddress, userAgent, "FAILED"));
@@ -111,11 +111,11 @@ public class AuthService {
                 .map(refreshTokenService::verifyExpiration)
                 .map(token -> {
                     // Rotate the token: delete old, create new
-                    RefreshToken newRefreshToken = refreshTokenService.rotate(token.getToken(), ipAddress, userAgent);
+                    RefreshTokenService.IssuedToken newRefreshToken = refreshTokenService.rotate(refreshTokenStr, ipAddress, userAgent);
 
                     String accessToken = tokenProvider.generateTokenFromUsername(token.getUser().getEmail());
 
-                    return new AuthResult(accessToken, newRefreshToken.getToken());
+                    return new AuthResult(accessToken, newRefreshToken.value());
                 })
                 .orElseThrow(() -> new TokenRefreshException(refreshTokenStr, "Refresh token is not in database!"));
     }

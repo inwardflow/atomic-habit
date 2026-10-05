@@ -289,7 +289,7 @@ const Settings = () => {
               <div>
                 <p className="font-medium text-slate-900 dark:text-white">{t('settings.preferences.language')}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {t('settings.preferences.subtitle')}
+                  {t('settings.preferences.languageHint')}
                 </p>
               </div>
               <LanguageSwitcher />
@@ -602,6 +602,18 @@ const Settings = () => {
             </div>
           )}
         </section>
+
+        <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+          Atomic Habit v{__APP_VERSION__} ·{' '}
+          <a
+            href="https://github.com/inwardflow/atomic-habit/releases"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-slate-600 dark:hover:text-slate-300"
+          >
+            {t('settings.releaseNotes')}
+          </a>
+        </p>
       </main>
     </div>
   );

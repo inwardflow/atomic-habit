@@ -103,7 +103,7 @@ const AgentActivityIndicator: React.FC<AgentActivityIndicatorProps> = ({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-xs">
+      <div className="flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-slate-900 px-3 py-2 text-xs">
         <span className={config.color}>{config.icon}</span>
         <span className={`font-medium ${config.color}`}>{config.label}</span>
         {toolCalls.length > 0 && (
@@ -118,7 +118,7 @@ const AgentActivityIndicator: React.FC<AgentActivityIndicatorProps> = ({
 
   // Full mode for CoachPage
   return (
-    <div className="rounded-lg border border-gray-100 bg-white p-3 shadow-sm">
+    <div className="rounded-lg border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm">
       {/* Phase header */}
       <div className="flex items-center gap-2">
         <span className={config.color}>{config.icon}</span>
@@ -128,7 +128,7 @@ const AgentActivityIndicator: React.FC<AgentActivityIndicatorProps> = ({
 
       {/* Tool call timeline */}
       {toolCalls.length > 0 && (
-        <div className="mt-2 ml-1 border-l-2 border-gray-100 pl-3 space-y-1.5">
+        <div className="mt-2 ml-1 border-l-2 border-gray-100 dark:border-slate-700 pl-3 space-y-1.5">
           {toolCalls.map((tc, idx) => (
             <div key={`${tc.name}-${idx}`} className="flex items-center gap-2 text-xs">
               {tc.status === 'running' ? (

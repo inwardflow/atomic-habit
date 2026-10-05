@@ -1,5 +1,7 @@
 package com.atomichabits.backend.integration;
 
+import com.atomichabits.backend.security.JwtTokenProvider;
+import com.atomichabits.backend.support.TestKeys;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,12 +10,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.http.HttpResponse;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -105,6 +109,26 @@ class SecurityIntegrationTest {
         // The message might be localized, so we strictly check the status code which is the API contract.
         // We can optionally check if body contains "locked" or "锁定"
         // assertTrue(lockedResp.body().contains("locked") || lockedResp.body().contains("锁定"));
+    }
+
+    @Test
+    void tokenWithForgedSignatureIsRejectedNotServerError() throws Exception {
+        // Valid structure and claims, but signed with a key the server does not know.
+        JwtTokenProvider attacker = new JwtTokenProvider();
+        ReflectionTestUtils.setField(attacker, "jwtSecret", TestKeys.randomHs256Secret());
+        ReflectionTestUtils.setField(attacker, "jwtExpirationMs", 60_000);
+        String forged = attacker.generateTokenFromUsername("victim@example.com");
+
+        HttpResponse<String> resp = httpClient.send(
+                java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create(url("/api/users/stats/advanced")))
+                        .header("Authorization", "Bearer " + forged)
+                        .GET()
+                        .build(),
+                HttpResponse.BodyHandlers.ofString());
+
+        assertTrue(resp.statusCode() == 401 || resp.statusCode() == 403,
+                "Forged token must be rejected as unauthenticated, got " + resp.statusCode());
     }
 
     private HttpResponse<String> sendPostRequest(String path, Object body) throws Exception {

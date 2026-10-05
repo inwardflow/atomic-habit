@@ -1,7 +1,13 @@
 package com.atomichabits.backend.config;
 
 import com.atomichabits.backend.agent.CoachTools;
+import com.atomichabits.backend.agent.AgentUserRegistry;
 import com.atomichabits.backend.agent.CoachLongTermMemory;
+import com.atomichabits.backend.agent.TrackingThreadSessionManager;
+import com.atomichabits.backend.model.User;
+import com.atomichabits.backend.repository.UserRepository;
+import com.atomichabits.backend.security.AguiThreadBindingFilter;
+import com.atomichabits.backend.service.ChatModelFactory;
 import io.agentscope.spring.boot.agui.common.AguiAgentRegistryCustomizer;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.agent.Agent;
@@ -9,28 +15,42 @@ import io.agentscope.core.memory.InMemoryMemory;
 import io.agentscope.core.memory.LongTermMemoryMode;
 import io.agentscope.core.model.OpenAIChatModel;
 import io.agentscope.core.tool.Toolkit;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AguiConfig {
 
-    @Value("${agentscope.model.api-key}")
-    private String apiKey;
-
-    @Value("${agentscope.model.model-name}")
-    private String modelName;
-
-    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
-    private String baseUrl;
-
     private final CoachTools coachTools;
     private final CoachLongTermMemory coachLongTermMemory;
+    private final ChatModelFactory chatModelFactory;
+    private final AgentUserRegistry agentUserRegistry;
+    private final UserRepository userRepository;
 
-    public AguiConfig(CoachTools coachTools, CoachLongTermMemory coachLongTermMemory) {
+    public AguiConfig(CoachTools coachTools, CoachLongTermMemory coachLongTermMemory, ChatModelFactory chatModelFactory,
+                      AgentUserRegistry agentUserRegistry, UserRepository userRepository) {
         this.coachTools = coachTools;
         this.coachLongTermMemory = coachLongTermMemory;
+        this.chatModelFactory = chatModelFactory;
+        this.agentUserRegistry = agentUserRegistry;
+        this.userRepository = userRepository;
+    }
+
+    /**
+     * Resolves the user for the agent being created from its thread id, which
+     * {@link com.atomichabits.backend.security.AguiThreadBindingFilter} pins to {@code user-<id>}.
+     */
+    private String resolveCreatingUserEmail() {
+        String threadId = TrackingThreadSessionManager.creatingThreadId();
+        if (threadId == null || !threadId.startsWith(AguiThreadBindingFilter.THREAD_PREFIX)) {
+            return null;
+        }
+        try {
+            long userId = Long.parseLong(threadId.substring(AguiThreadBindingFilter.THREAD_PREFIX.length()));
+            return userRepository.findById(userId).map(User::getEmail).orElse(null);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Bean
@@ -45,30 +65,15 @@ public class AguiConfig {
                 .tool(coachTools)
                 .apply();
 
-        // Configure HTTP transport with explicit timeouts
-        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
-                .connectTimeout(java.time.Duration.ofSeconds(30))
-                .readTimeout(java.time.Duration.ofMinutes(3))
-                .writeTimeout(java.time.Duration.ofSeconds(30))
-                .build();
-        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
-                .config(transportConfig)
-                .build();
+        // Some provider/model combinations emit malformed streaming tool events,
+        // which breaks @ag-ui/client verification and surfaces as "Connection failed".
+        // Disable model-level streaming so AG-UI can emit a stable event sequence.
+        OpenAIChatModel model = chatModelFactory.create(false);
 
-        // Initialize Model
-        OpenAIChatModel model = OpenAIChatModel.builder()
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .baseUrl(baseUrl)
-                .httpTransport(httpTransport)
-                // Some provider/model combinations emit malformed streaming tool events,
-                // which breaks @ag-ui/client verification and surfaces as "Connection failed".
-                // Disable model-level streaming so AG-UI can emit a stable event sequence.
-                .stream(false)
-                .build();
+        String email = resolveCreatingUserEmail();
 
         // Initialize Agent
-        return ReActAgent.builder()
+        ReActAgent agent = ReActAgent.builder()
                 .name("AtomicCoach")
                 .sysPrompt("""
                         You are an expert AI Coach based on James Clear's 'Atomic Habits'.
@@ -105,6 +110,7 @@ public class AguiConfig {
                         - Keep the plan small (3-5 habits), practical, and anxiety-friendly.
 
                         STYLE RULES:
+                        - Reply in the same language as the user's latest message (including quick replies).
                         - Keep responses concise (usually <= 3 sentences outside JSON).
                         - No shaming language.
                         - Encourage "start small" and consistency over intensity.
@@ -117,8 +123,12 @@ public class AguiConfig {
                 .model(model)
                 .toolkit(toolkit)
                 .memory(new InMemoryMemory())
-                .longTermMemory(coachLongTermMemory)
+                .longTermMemory(email != null ? coachLongTermMemory.forUser(email) : coachLongTermMemory)
                 .longTermMemoryMode(LongTermMemoryMode.STATIC_CONTROL)
                 .build();
+        if (email != null) {
+            agentUserRegistry.bind(agent, email);
+        }
+        return agent;
     }
 }

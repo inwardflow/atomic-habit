@@ -1,5 +1,7 @@
 package com.atomichabits.backend.service;
 
+import com.atomichabits.backend.agent.AgentUserRegistry;
+import com.atomichabits.backend.config.AiModelProperties;
 import io.agentscope.core.ReActAgent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.MsgRole;
@@ -7,55 +9,69 @@ import io.agentscope.core.message.TextBlock;
 import io.agentscope.core.model.OpenAIChatModel;
 import io.agentscope.core.tool.Toolkit;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
-
+/**
+ * Synchronous, single-turn access to the AI Coach model for REST endpoints and background jobs.
+ *
+ * <p>Never throws: when the model is disabled, unconfigured or unreachable a friendly fallback
+ * message is returned so the calling feature keeps working.</p>
+ */
 @Slf4j
 @Service
 public class AgentScopeClient {
 
-    @Value("${agentscope.model.api-key}")
-    private String apiKey;
+    static final String DISABLED_RESPONSE = "AI disabled (tests).";
+    static final String MISSING_KEY_RESPONSE =
+            "I am currently unable to connect to the AI service (Missing API Key). Please check your configuration.";
+    static final String UNAVAILABLE_RESPONSE =
+            "I am currently unable to connect to the AI service (Invalid API Key or Service Unavailable). "
+                    + "Please check your backend configuration. In the meantime, I'm here to support your habit tracking!";
 
-    @Value("${agentscope.model.model-name}")
-    private String modelName;
+    private final AiModelProperties properties;
+    private final ChatModelFactory chatModelFactory;
+    private final AgentUserRegistry agentUserRegistry;
 
-    @Value("${agentscope.model.base-url:https://api.siliconflow.com/v1}")
-    private String baseUrl;
-
-    @Value("${agentscope.enabled:true}")
-    private boolean agentscopeEnabled;
-
-    @Value("${agentscope.proxy.host:}")
-    private String proxyHost;
-
-    @Value("${agentscope.proxy.port:0}")
-    private int proxyPort;
-
-    @Value("${agentscope.proxy.enabled:false}")
-    private boolean proxyEnabled;
+    public AgentScopeClient(AiModelProperties properties, ChatModelFactory chatModelFactory,
+                            AgentUserRegistry agentUserRegistry) {
+        this.properties = properties;
+        this.chatModelFactory = chatModelFactory;
+        this.agentUserRegistry = agentUserRegistry;
+    }
 
     public String call(String userMessage, String systemPrompt) {
         return call(userMessage, systemPrompt, (Object[]) null);
     }
 
+    /**
+     * @param tools objects exposing {@code @Tool}-annotated methods the agent may invoke
+     */
     public String call(String userMessage, String systemPrompt, Object... tools) {
-        if (!agentscopeEnabled) {
-            return "AI disabled (tests).";
+        return callAsUser(null, userMessage, systemPrompt, tools);
+    }
+
+    /**
+     * Like {@link #call(String, String, Object...)}, but binds the agent to {@code userEmail} so
+     * tools can identify the user even when they run outside the request thread.
+     */
+    public String callAsUser(String userEmail, String userMessage, String systemPrompt, Object... tools) {
+        if (!properties.isEnabled()) {
+            return DISABLED_RESPONSE;
         }
-        if (!StringUtils.hasText(apiKey)) {
+        if (!properties.isConfigured()) {
             log.warn("AgentScope API Key is missing. Returning fallback response.");
-            return "I am currently unable to connect to the AI service (Missing API Key). Please check your configuration.";
+            return MISSING_KEY_RESPONSE;
         }
 
-        configureProxy();
-
+        ReActAgent agent = null;
         try {
-            OpenAIChatModel model = buildModel();
-            ReActAgent agent = buildAgent(model, systemPrompt, tools);
+            // Non-streaming: we block for the full reply anyway, and some OpenAI-compatible providers
+            // emit malformed streamed tool_call deltas (empty name/arguments), silently dropping tool calls.
+            agent = buildAgent(chatModelFactory.create(false), systemPrompt, tools);
+            if (StringUtils.hasText(userEmail)) {
+                agentUserRegistry.bind(agent, userEmail);
+            }
 
             Msg response = agent.call(Msg.builder()
                             .role(MsgRole.USER)
@@ -65,44 +81,13 @@ public class AgentScopeClient {
 
             return response != null ? response.getTextContent() : "";
         } catch (Exception e) {
-            log.error("AI call failed: {}", e.getMessage());
-            return "I am currently unable to connect to the AI service (Invalid API Key or Service Unavailable). " +
-                    "Please check your backend configuration. In the meantime, I'm here to support your habit tracking!";
-        }
-    }
-
-    private void configureProxy() {
-        if (proxyEnabled) {
-            if (proxyHost != null && !proxyHost.isBlank() && proxyPort > 0) {
-                try {
-                    System.setProperty("http.proxyHost", proxyHost);
-                    System.setProperty("http.proxyPort", String.valueOf(proxyPort));
-                    System.setProperty("https.proxyHost", proxyHost);
-                    System.setProperty("https.proxyPort", String.valueOf(proxyPort));
-                } catch (Exception e) {
-                    log.warn("Failed to configure proxy: {}", e.getMessage());
-                }
-            } else {
-                log.warn("Proxy is enabled but host/port is invalid — skipping proxy configuration.");
+            log.error("AI call failed: {}", e.getMessage(), e);
+            return UNAVAILABLE_RESPONSE;
+        } finally {
+            if (agent != null) {
+                agentUserRegistry.unbind(agent);
             }
         }
-    }
-
-    private OpenAIChatModel buildModel() {
-        var transportConfig = io.agentscope.core.model.transport.HttpTransportConfig.builder()
-                .connectTimeout(Duration.ofSeconds(30))
-                .readTimeout(Duration.ofMinutes(3))
-                .writeTimeout(Duration.ofSeconds(30))
-                .build();
-        var httpTransport = io.agentscope.core.model.transport.JdkHttpTransport.builder()
-                .config(transportConfig)
-                .build();
-        return OpenAIChatModel.builder()
-                .apiKey(apiKey)
-                .modelName(modelName)
-                .baseUrl(baseUrl)
-                .httpTransport(httpTransport)
-                .build();
     }
 
     private ReActAgent buildAgent(OpenAIChatModel model, String systemPrompt, Object... tools) {
@@ -112,13 +97,23 @@ public class AgentScopeClient {
                 .model(model);
 
         if (tools != null && tools.length > 0) {
-            Toolkit toolkit = new Toolkit();
-            toolkit.registration()
-                    .tool(tools)
-                    .apply();
-            builder.toolkit(toolkit);
+            builder.toolkit(buildToolkit(tools));
         }
 
         return builder.build();
+    }
+
+    /**
+     * Registers each tool object individually. {@code registration().tool(Object)} takes a single
+     * object, so passing the varargs array directly would register no tools at all.
+     */
+    static Toolkit buildToolkit(Object... tools) {
+        Toolkit toolkit = new Toolkit();
+        for (Object tool : tools) {
+            if (tool != null) {
+                toolkit.registration().tool(tool).apply();
+            }
+        }
+        return toolkit;
     }
 }

@@ -89,6 +89,7 @@ public class UserService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public AdvancedUserStatsResponse getAdvancedStats(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -96,15 +97,18 @@ public class UserService {
         List<HabitCompletion> completions = habitCompletionRepository.findByHabitUserId(user.getId());
 
         // 1. Daily Completions (Last 30 Days)
-        LocalDate thirtyDaysAgo = LocalDate.now().minusDays(30);
+        // 30-day window including today.
+        LocalDate thirtyDaysAgo = LocalDate.now().minusDays(29);
         Map<LocalDate, Long> dailyCounts = completions.stream()
                 .map(c -> c.getCompletedAt().toLocalDate())
                 .filter(d -> !d.isBefore(thirtyDaysAgo))
                 .collect(Collectors.groupingBy(d -> d, Collectors.counting()));
 
-        List<DailyCompletionDTO> last30Days = dailyCounts.entrySet().stream()
-                .map(e -> new DailyCompletionDTO(e.getKey(), e.getValue().intValue()))
-                .sorted(Comparator.comparing(DailyCompletionDTO::getDate))
+        // One entry per day, zeros included, so charts show missed days instead of interpolating
+        // straight across them.
+        LocalDate today = LocalDate.now();
+        List<DailyCompletionDTO> last30Days = thirtyDaysAgo.datesUntil(today.plusDays(1))
+                .map(d -> new DailyCompletionDTO(d, dailyCounts.getOrDefault(d, 0L).intValue()))
                 .toList();
 
         // 2. Completions by Habit

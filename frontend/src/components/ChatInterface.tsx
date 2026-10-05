@@ -77,8 +77,11 @@ const isGoalPlan = (value: unknown): value is GoalPlan =>
 
 const normalizeContent = (value: unknown): string => {
   if (typeof value === 'string') return value;
+  // Assistant messages that only carry tool calls have no content; JSON.stringify(undefined)
+  // would return undefined rather than a string.
+  if (value == null) return '';
   try {
-    return JSON.stringify(value);
+    return JSON.stringify(value) ?? '';
   } catch {
     return String(value ?? '');
   }
@@ -110,6 +113,12 @@ const parseToolArguments = (rawArgs: unknown): Record<string, unknown> => {
   return {};
 };
 
+/**
+ * The compact chat renders no tool cards, so tool calls (status lookups, mood logging...) are never
+ * injected into the bubble as raw JSON; the activity indicator shows them instead.
+ */
+const RENDERED_TOOLS = new Set<string>();
+
 const buildToolCallBlocks = (toolCalls: unknown): string => {
   if (!Array.isArray(toolCalls) || toolCalls.length === 0) return '';
 
@@ -118,7 +127,7 @@ const buildToolCallBlocks = (toolCalls: unknown): string => {
       if (!isRecord(call)) return '';
       const func = isRecord(call.function) ? call.function : null;
       const name = func && typeof func.name === 'string' ? func.name : '';
-      if (!name) return '';
+      if (!RENDERED_TOOLS.has(name)) return '';
 
       const payload = {
         name,
@@ -208,8 +217,14 @@ const extractAssistantFromRunResult = (result: unknown, depth: number = 0): stri
   return null;
 };
 
+const isDisplayableRole = (role: unknown): boolean => {
+  const normalized = typeof role === 'string' ? role.toLowerCase() : '';
+  return normalized === 'user' || normalized === 'assistant' || normalized === 'ai';
+};
+
+/** Only user/assistant turns with visible text; tool results and system messages are internal. */
 const toUiMessages = (messages: AgentMessageShape[]): UiMessage[] =>
-  messages.map((message, index) => {
+  messages.filter((message) => isDisplayableRole(message.role)).map((message, index) => {
     const roleValue = typeof message.role === 'string' ? message.role : 'assistant';
     const role = roleValue === 'assistant' ? 'ai' : roleValue;
     const content = buildRenderableContent(message);
@@ -221,6 +236,23 @@ const toUiMessages = (messages: AgentMessageShape[]): UiMessage[] =>
       role,
       content,
     };
+  }).filter((message) => message.content.trim().length > 0);
+
+/** Tools that change data shown on the dashboard; after any of them runs the dashboard reloads. */
+const MUTATING_TOOLS = new Set([
+  'create_first_habit',
+  'complete_habit',
+  'save_user_identity',
+  'log_mood',
+]);
+
+const ranMutatingTool = (messages: unknown[]): boolean =>
+  messages.some((message) => {
+    if (!isRecord(message) || !Array.isArray(message.toolCalls)) return false;
+    return message.toolCalls.some((call) => {
+      const func = isRecord(call) && isRecord(call.function) ? call.function : null;
+      return !!func && typeof func.name === 'string' && MUTATING_TOOLS.has(func.name);
+    });
   });
 
 const extractRefreshAction = (content: string): boolean => {
@@ -311,6 +343,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   const token = useAuthStore((state) => state.token);
 
   const agentRef = useRef<HttpAgent | null>(null);
+  const tokenRef = useRef(token);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedActionsRef = useRef<Set<string>>(new Set());
   const handledRunErrorSignaturesRef = useRef<Set<string>>(new Set());
@@ -359,10 +392,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   useEffect(() => {
     if (!user) return;
 
+    // The server pins threadId to the authenticated user; the value sent here is only a hint.
     const agent = new HttpAgent({
       url: AGENT_RUN_URL,
       threadId: `user-${user.id}`,
-      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+      headers: tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {},
     });
 
     agentRef.current = agent;
@@ -381,11 +415,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           processedActionsRef.current.add(lastMessage.id);
         }
 
-        setLoading(false);
+      },
+      onEvent: ({ event }) => {
+        // Drive the activity indicator from protocol events (RUN_STARTED, TOOL_CALL_*, TEXT_MESSAGE_*).
+        processEvent(event as unknown as Record<string, unknown>);
       },
       onRawEvent: ({ event }) => {
-        // Forward raw events to activity tracker
-        processEvent(event);
 
         const rawEvent = (event as unknown as Record<string, unknown>)?.rawEvent as Record<string, unknown> | undefined;
         const errorText = typeof rawEvent?.error === 'string' ? rawEvent.error.trim() : '';
@@ -427,7 +462,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       agentRef.current = null;
       resetActivity();
     };
-  }, [handleRefreshAction, processEvent, resetActivity, token, user, toUserFacingAgentError, t]);
+    // Recreate only for a different user; token refreshes just update headers (below), so the
+    // conversation survives the 15-minute access-token rotation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    tokenRef.current = token;
+    if (agentRef.current) {
+      agentRef.current.headers = token ? { Authorization: `Bearer ${token}` } : {};
+    }
+  }, [token]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -451,9 +496,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       setLoading(true);
       markRunStart();
 
+      const messageCountBeforeRun = agent.messages.length;
       try {
         const beforeSignature = getLastAssistantSignature(agent.messages as Message[]);
         const runResult = await runAgentWithRetry(agent, { runId: `run-${Date.now()}` });
+        if (ranMutatingTool(agent.messages.slice(messageCountBeforeRun))) {
+          onHabitsAdded?.();
+          onIdentityUpdated?.();
+        }
         const afterSignature = getLastAssistantSignature(agent.messages as Message[]);
 
         if (beforeSignature === afterSignature) {
@@ -480,7 +530,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         setLoading(false);
       }
     },
-    [input, loading, markRunStart, markRunError]
+    [input, loading, markRunStart, markRunError, onHabitsAdded, onIdentityUpdated]
   );
 
   const handleWeeklyReview = useCallback(() => {
@@ -539,7 +589,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
               key={reply}
               onClick={() => void sendMessage(reply)}
               disabled={loading}
-              className="rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-xs text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:opacity-50"
+              className="rounded-full border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-indigo-600 shadow-sm transition-colors hover:bg-indigo-50 disabled:opacity-50"
             >
               {reply}
             </button>
@@ -579,28 +629,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
             <ReactMarkdown>{textBefore}</ReactMarkdown>
           </div>
 
-          <div className="my-3 rounded-lg border border-indigo-100 bg-white p-3 shadow-sm">
-            <h4 className="mb-2 flex items-center text-sm font-bold text-indigo-700">
+          <div className="my-3 rounded-lg border border-indigo-100 dark:border-indigo-900 bg-white dark:bg-slate-800 p-3 shadow-sm">
+            <h4 className="mb-2 flex items-center text-sm font-bold text-indigo-700 dark:text-indigo-300">
               <Zap size={14} className="mr-1" />
               {planTitle}
             </h4>
 
-            {planDescription && <p className="mb-3 text-xs italic text-gray-600">"{planDescription}"</p>}
+            {planDescription && <p className="mb-3 text-xs italic text-gray-600 dark:text-slate-300">"{planDescription}"</p>}
 
             <ul className="mb-4 space-y-3 text-sm">
               {habits.map((habit, index) => (
-                <li key={`${habit.name}-${index}`} className="border-b border-gray-100 pb-2 last:border-0">
+                <li key={`${habit.name}-${index}`} className="border-b border-gray-100 dark:border-slate-700 pb-2 last:border-0">
                   <div className="flex items-start">
-                    <span className="mr-2 mt-1 text-xs text-gray-400">{index + 1}.</span>
+                    <span className="mr-2 mt-1 text-xs text-gray-400 dark:text-slate-500">{index + 1}.</span>
                     <div>
-                      <strong className="block text-gray-800">{habit.name}</strong>
+                      <strong className="block text-gray-800 dark:text-slate-100">{habit.name}</strong>
                       {habit.twoMinuteVersion && (
                         <div className="mt-0.5 w-fit rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-600">
                           {t('plan.two_min_rule')} {habit.twoMinuteVersion}
                         </div>
                       )}
                       {habit.cueImplementationIntention && (
-                        <div className="mt-1 border-l-2 border-gray-200 pl-1 text-xs text-gray-500">
+                        <div className="mt-1 border-l-2 border-gray-200 dark:border-slate-700 pl-1 text-xs text-gray-500 dark:text-slate-400">
                           {habit.cueImplementationIntention}
                         </div>
                       )}
@@ -620,7 +670,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
               </button>
               <button
                 onClick={() => void handleAddPlan(plan)}
-                className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white py-2 text-xs text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
+                className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white dark:bg-slate-800 py-2 text-xs text-gray-500 dark:text-slate-400 transition-colors hover:bg-gray-50 hover:text-gray-700"
               >
                 <Layers size={14} className="mr-1" />
                 {Array.isArray(plan) ? t('plan.add_all_challenge') : t('plan.add_full_plan')}
@@ -645,7 +695,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
   );
 
   return (
-    <div className="fixed bottom-24 right-6 z-40 flex h-[500px] max-h-[70vh] w-96 max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-2xl">
+    <div className="fixed bottom-24 right-6 z-40 flex h-[500px] max-h-[70vh] w-96 max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl">
       <div className="flex shrink-0 items-center justify-between border-b bg-indigo-600 p-4 text-white">
         <h3 className="flex items-center gap-2 font-bold">
           <Zap size={18} />
@@ -666,33 +716,33 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
       </div>
 
       {recentMoods.length > 0 && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-indigo-100 bg-indigo-50 px-4 py-2 text-xs text-indigo-800">
+        <div className="flex shrink-0 items-center gap-2 border-b border-indigo-100 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/40 px-4 py-2 text-xs text-indigo-800 dark:text-indigo-200">
           <span className="font-semibold">{t('memory.context')}</span>
           <div className="no-scrollbar flex gap-1 overflow-x-auto">
             {recentMoods.slice(0, 3).map((mood, index) => (
               <span
                 key={`${mood.moodType}-${index}`}
-                className="whitespace-nowrap rounded border border-indigo-200 bg-white px-2 py-0.5"
+                className="whitespace-nowrap rounded border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-2 py-0.5"
               >
-                {mood.moodType}
+                {t(`mood.types.${String(mood.moodType).toLowerCase()}`, { ns: 'translation', defaultValue: mood.moodType })}
               </span>
             ))}
-            {recentMoods.length > 3 && <span className="text-gray-400">+{recentMoods.length - 3}</span>}
+            {recentMoods.length > 3 && <span className="text-gray-400 dark:text-slate-500">+{recentMoods.length - 3}</span>}
           </div>
         </div>
       )}
 
-      <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-4">
+      <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 p-4">
         {shouldShowStarterGuide && (
-          <div className="rounded-lg border border-indigo-100 bg-gradient-to-r from-indigo-50 to-blue-50 p-3">
-            <h4 className="text-xs font-semibold text-indigo-800">{t('starter.need_starting_point')}</h4>
+          <div className="rounded-lg border border-indigo-100 dark:border-indigo-900 bg-gradient-to-r from-indigo-50 dark:from-indigo-950/40 to-blue-50 dark:to-slate-900 p-3">
+            <h4 className="text-xs font-semibold text-indigo-800 dark:text-indigo-200">{t('starter.need_starting_point')}</h4>
             <div className="mt-2 flex flex-wrap gap-2">
               {STARTER_PROMPTS.map((prompt) => (
                 <button
                   key={prompt}
                   onClick={() => void sendMessage(prompt)}
                   disabled={loading}
-                  className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-xs text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-60"
+                  className="rounded-full border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 transition-colors hover:bg-indigo-100 disabled:opacity-60"
                 >
                   {prompt}
                 </button>
@@ -711,7 +761,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
           <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
               className={`max-w-[85%] rounded-lg p-3 ${
-                message.role === 'user' ? 'bg-indigo-100 text-indigo-900' : 'bg-gray-100 text-gray-800'
+                message.role === 'user' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100' : 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-100'
               } ${message.role === 'ai' ? 'shadow-sm' : ''}`}
             >
               {message.role === 'ai' ? renderMessageContent(message.content) : message.content}
@@ -731,13 +781,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose, onHabitsAdded, o
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex gap-2 border-t p-4">
+      <div className="flex gap-2 border-t dark:border-slate-700 p-4">
         <input
-          className="flex-1 rounded border p-2 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          className="flex-1 rounded border p-2 bg-white text-gray-900 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
               void sendMessage();
             }
           }}

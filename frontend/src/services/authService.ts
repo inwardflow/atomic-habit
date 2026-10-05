@@ -1,5 +1,5 @@
 
-import api from '../api/axios';
+import api, { refreshAccessToken } from '../api/axios';
 import { useAuthStore } from '../store/authStore';
 import type { Session, LoginHistory } from '../types/authTypes';
 
@@ -29,6 +29,16 @@ export interface RegisterData {
     identityStatement?: string;
 }
 
+/** Loads the signed-in user's profile into the auth store (pages and the coach rely on it). */
+const loadCurrentUser = async () => {
+    try {
+        const response = await api.get('/users/me');
+        useAuthStore.getState().setUser(response.data);
+    } catch {
+        // Non-fatal: pages that need the profile fetch it again.
+    }
+};
+
 export const authService = {
     // ... existing methods
     login: async (credentials: LoginCredentials) => {
@@ -36,6 +46,7 @@ export const authService = {
         const response = await api.post('/auth/login', { ...credentials, deviceId });
         const { accessToken } = response.data;
         useAuthStore.getState().setToken(accessToken);
+        await loadCurrentUser();
         return response.data;
     },
     
@@ -61,9 +72,8 @@ export const authService = {
 
     checkAuth: async () => {
         try {
-            const response = await api.post('/auth/refresh-token');
-            const { accessToken } = response.data;
-            useAuthStore.getState().setToken(accessToken);
+            await refreshAccessToken();
+            await loadCurrentUser();
         } catch {
             useAuthStore.getState().logout();
         } finally {

@@ -206,7 +206,11 @@ class UserServiceTest {
 
         // Assert
         // Check Daily Completions
-        assertEquals(2, stats.getLast30Days().size()); // 2 days with data
+        // One entry per day of the 30-day window, with zeros for days without completions
+        assertEquals(30, stats.getLast30Days().size());
+        assertEquals(today, stats.getLast30Days().get(29).getDate());
+        assertEquals(2, stats.getLast30Days().stream().filter(d -> d.getCount() > 0).count());
+        assertEquals(0, stats.getLast30Days().get(0).getCount());
         
         // Check Completions by Habit
         assertEquals(2, stats.getCompletionsByHabit().get("Run"));

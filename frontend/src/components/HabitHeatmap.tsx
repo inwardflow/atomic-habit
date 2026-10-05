@@ -25,10 +25,11 @@ const HabitHeatmap: React.FC<HabitHeatmapProps> = ({ completions }) => {
 
   const getColor = (count: number) => {
     if (count === 0) return 'bg-gray-50 border border-gray-100 dark:bg-slate-800/50 dark:border-slate-700'; // Softer empty state
-    if (count === 1) return 'bg-emerald-200 border border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-800/50';
-    if (count === 2) return 'bg-emerald-300 border border-emerald-400 dark:bg-emerald-800/40 dark:border-emerald-700/50';
-    if (count === 3) return 'bg-emerald-400 border border-emerald-500 dark:bg-emerald-700/50 dark:border-emerald-600/50';
-    return 'bg-emerald-500 border border-emerald-600 dark:bg-emerald-600 dark:border-emerald-500';
+    // Dark mode: solid steps that get brighter with activity (translucent greens vanished on slate).
+    if (count === 1) return 'bg-emerald-200 border border-emerald-300 dark:bg-emerald-900 dark:border-emerald-800';
+    if (count === 2) return 'bg-emerald-300 border border-emerald-400 dark:bg-emerald-700 dark:border-emerald-600';
+    if (count === 3) return 'bg-emerald-400 border border-emerald-500 dark:bg-emerald-500 dark:border-emerald-400';
+    return 'bg-emerald-500 border border-emerald-600 dark:bg-emerald-400 dark:border-emerald-300';
   };
 
   // Helper to format date as YYYY-MM-DD in local time
@@ -69,10 +70,10 @@ const HabitHeatmap: React.FC<HabitHeatmapProps> = ({ completions }) => {
       <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 justify-end">
         <span>{t('heatmap.legend.rest')}</span>
         <div className="w-3.5 h-3.5 bg-gray-50 border border-gray-100 dark:bg-slate-800/50 dark:border-slate-700 rounded-sm" />
-        <div className="w-3.5 h-3.5 bg-emerald-200 dark:bg-emerald-900/30 rounded-sm" />
-        <div className="w-3.5 h-3.5 bg-emerald-300 dark:bg-emerald-800/40 rounded-sm" />
-        <div className="w-3.5 h-3.5 bg-emerald-400 dark:bg-emerald-700/50 rounded-sm" />
-        <div className="w-3.5 h-3.5 bg-emerald-500 dark:bg-emerald-600 rounded-sm" />
+        <div className="w-3.5 h-3.5 bg-emerald-200 dark:bg-emerald-900 rounded-sm" />
+        <div className="w-3.5 h-3.5 bg-emerald-300 dark:bg-emerald-700 rounded-sm" />
+        <div className="w-3.5 h-3.5 bg-emerald-400 dark:bg-emerald-500 rounded-sm" />
+        <div className="w-3.5 h-3.5 bg-emerald-500 dark:bg-emerald-400 rounded-sm" />
         <span>{t('heatmap.legend.action')}</span>
       </div>
     </div>

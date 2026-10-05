@@ -11,6 +11,9 @@ interface IdentityScoreProps {
   identity: string;
 }
 
+/** Identity statements are often saved as full sentences ("I am a reader"); don't prefix them again. */
+const isFullIdentityStatement = (identity: string): boolean => /^\s*(i\s+am\b|i'm\b|我是)/i.test(identity);
+
 const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
   const { t } = useTranslation();
   const [prevLevel, setPrevLevel] = useState<number | null>(null);
@@ -91,7 +94,7 @@ const IdentityScore: React.FC<IdentityScoreProps> = ({ stats, identity }) => {
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="flex-1">
             <h2 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-2">
-                {t('identity_score.title', { identity })}
+                {isFullIdentityStatement(identity) ? identity : t('identity_score.title', { identity })}
             </h2>
             
             <div className="flex flex-wrap items-center gap-3 mb-3">

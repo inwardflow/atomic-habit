@@ -7,9 +7,19 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+  security:
+    jwt:
+      # No fallback in production: refuse to start without an explicit secret.
+      secret: ${SPRING_JWT_SECRET}
   h2:
     console:
       enabled: false
+  # Schema is owned by Flyway (src/main/resources/db/migration); Hibernate only validates it.
+  flyway:
+    enabled: true
+    # Databases created by ddl-auto before v0.1.0 already contain the V1 schema.
+    baseline-on-migrate: true
+    baseline-version: 1
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
