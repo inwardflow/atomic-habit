@@ -41,7 +41,7 @@
         <argLine></argLine>
         <embedded-postgres.version>2.2.2</embedded-postgres.version>
         <!-- Matches the postgres:15 image used by docker-compose. -->
-        <embedded-postgres-binaries.version>15.19.0</embedded-postgres-binaries.version>
+        <embedded-postgres-binaries.version>18.6.0</embedded-postgres-binaries.version>
     </properties>
 
     <dependencyManagement>
