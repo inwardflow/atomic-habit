@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
-FROM node:20-alpine AS build
+# Static assets are platform-independent: build once natively, even for multi-arch images.
+FROM --platform=$BUILDPLATFORM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./

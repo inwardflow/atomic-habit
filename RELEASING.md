@@ -39,8 +39,8 @@ only receive their exact image tag (not `latest`).
 ## Verifying an artifact
 
 ```bash
-gh attestation verify atomic-habits-backend-0.1.0.jar --repo inwardflow/atomic-habit
-gh attestation verify oci://ghcr.io/inwardflow/atomic-habit-backend:0.1.0 --repo inwardflow/atomic-habit
+gh attestation verify atomic-habits-backend-0.1.1.jar --repo inwardflow/atomic-habit
+gh attestation verify oci://ghcr.io/inwardflow/atomic-habit-backend:0.1.1 --repo inwardflow/atomic-habit
 ```
 
 ## If a release goes wrong
