@@ -39,7 +39,7 @@
         <jacoco.version>0.8.15</jacoco.version>
         <!-- Default for @{argLine} when JaCoCo doesn't set it (e.g. -Djacoco.skip=true). -->
         <argLine></argLine>
-        <embedded-postgres.version>2.2.2</embedded-postgres.version>
+        <embedded-postgres.version>2.2.3</embedded-postgres.version>
         <!-- Matches the postgres:15 image used by docker-compose. -->
         <embedded-postgres-binaries.version>15.19.0</embedded-postgres-binaries.version>
     </properties>
